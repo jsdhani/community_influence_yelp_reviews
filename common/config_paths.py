@@ -1,0 +1,6 @@
+YELP_DATA = "data/raw/yelp/"
+YELP_BUSINESS = YELP_DATA + "business.json"
+YELP_CHECKIN = YELP_DATA + "checkin.json"
+YELP_REVIEWS = YELP_DATA + "reviews.json"
+YELP_TIP = YELP_DATA + "tip.json"
+YELP_USERS = YELP_DATA + "users.json"
