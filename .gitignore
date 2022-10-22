@@ -1,0 +1,4 @@
+data/raw/yelp/*.tar
+data/raw/yelp/yelp_dataset/*
+data/raw/yelp/yelp_photos/*
+*.pyc
