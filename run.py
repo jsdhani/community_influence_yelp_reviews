@@ -3,61 +3,71 @@ I am just using this as a test bed for now, please excuse the mess...
 """
 
 # %%
+import chunk
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from utils.query_raw_yelp import QueryYelp as qy
-from utils.sentiment import VADER_SentimentAnalysis
+from utils.sentiment import VADER, TBlob, Happy
 from common.config_paths import YELP_DATA
 import pandas as pd
 
 # %% file location:
 REVIEW = YELP_DATA + "yelp_dataset/yelp_academic_dataset_review.json"
 
-# %%
-v_mdl = VADER_SentimentAnalysis()
-
+# %% get the data:
 reader = qy.get_json_reader(REVIEW)
+# combining multiple chunks into one dataframe
 df_rev = next(reader) # 1000 rows
+for i in range(10): # 10,000 rows
+    chunk = next(reader)
+    df_rev = pd.concat([df_rev, chunk], ignore_index=True)
 
-# %% displaying sentiment distribution
-scores = v_mdl.get_sentiment_distribution(df_rev, plot=True)
+#######################################################
+# %% Happy Transformer:
+hp = Happy(model_type="DISTILBERT")
+
+# %% get the sentiment of 10 reviews:
+# pd.set_option("display.max_colwidth", None)
+# pd.set_option('display.colheader_justify', 'right')
+# res = pd.concat([df_rev['text'][:10], df_rev['stars'][:10], hp.get_sentiment(df_rev[:10])], axis=1, ignore_index=True)
+
+# %% get distribution of sentiment scores:
+_ = hp.get_sentiment_distribution(df_rev, bins=100, plot=True)
+
+#######################################################
+# %% VADER:
+v_mdl = VADER()
+
+length, dist_l = v_mdl.get_review_length_distribution(df_rev, bins=100, plot=True)
+scores, dist_s = v_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True)
+
+# %% splitting into short reviews and long reviews
+cf = 200
+df_rev_short = df_rev[df_rev['text'].str.len() < cf]
+df_rev_long = df_rev[df_rev['text'].str.len() >= cf]
+
+print(len(df_rev_short), len(df_rev_long))
+
+# %% displaying sentiment distribution with short reviews
+scores_short, dist_short = v_mdl.get_sentiment_distribution(df_rev_short, bins=100, plot=True)
+
+# %% displaying sentiment distribution with long reviews
+scores_long, dist_long = v_mdl.get_sentiment_distribution(df_rev_long, bins=100, plot=True)
 
 
-# %% merge the scores with text and sort by compound score
-# text = df_rev["text"]
-# df = pd.concat([text, scores], axis=1)
+# %% calculating correlation between star rating and sentiment
+stars = df_rev['stars']
+data = pd.concat([stars, scores, length], axis=1)
+print(data.groupby('stars').mean())
+print(data.corr())
 
-# df_sort = df.sort_values("compound") # +1 compound value indicates most positive sentiment
 
-# %% get the top 10 most positive and 10 most negative reviews and display
-# for i in range(10):
-#     print("-" * 50)
-#     print(df_sort["compound"].iloc[i])
-#     print(df_sort["text"].iloc[i])
-#     print("-" * 50)
-    
-    
 
-# def get_top_n_reviews(self, df: pd.DataFrame, n: int, sort_col: str, ascending: bool = False):
-#     return df.sort_values(sort_col, ascending=ascending).iloc[:n]["text"]
+#######################################################
+# %% TEXTBLOB:
+tb_mdl = TBlob()
 
-# def get_bottom_n_reviews(self, df: pd.DataFrame, n: int, sort_col: str, ascending: bool = False):
-#     return df.sort_values(sort_col, ascending=ascending).iloc[-n:]["text"]
-# for i in range(10):
-#     print("-" * 50)
-#     print(df_sort["compound"].iloc[-i])
-#     print(df_sort["text"].iloc[-i])
-#     print("-" * 50)
+scores, dist_s = tb_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True)
+_ = tb_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True, score="subjectivity")
 
-# # %%
-# max_score = 0
-# target = 'cool'
-# text = "EMPTY"
-# for chunk in reader:
-#     row = chunk.sort_values(target)[::-1].iloc[0,4:8]
-#     if max_score < row[target]:
-#         max_score = row[target]
-#         text = row['text']
-# print(max_score)
-# print(text)
 
 # %%
