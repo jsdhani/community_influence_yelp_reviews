@@ -1,2 +1,2 @@
-YELP_DATA = "/data/raw/yelp/"
+YELP_DATA = "data/raw/yelp/"
 
