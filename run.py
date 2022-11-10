@@ -3,8 +3,7 @@ I am just using this as a test bed for now, please excuse the mess...
 """
 
 # %%
-import chunk
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from utils.query_raw_yelp import QueryYelp as qy
 from utils.sentiment import VADER, TBlob, Happy
 from common.config_paths import YELP_DATA
@@ -17,19 +16,20 @@ REVIEW = YELP_DATA + "yelp_dataset/yelp_academic_dataset_review.json"
 reader = qy.get_json_reader(REVIEW)
 # combining multiple chunks into one dataframe
 df_rev = next(reader) # 1000 rows
-for i in range(10): # 10,000 rows
+for i in range(500): # 10,000 rows
     chunk = next(reader)
     df_rev = pd.concat([df_rev, chunk], ignore_index=True)
+    
 
 #######################################################
 # %% Happy Transformer:
 hp = Happy(model_type="DISTILBERT")
 
+
 # %% get the sentiment of 10 reviews:
 # pd.set_option("display.max_colwidth", None)
 # pd.set_option('display.colheader_justify', 'right')
 # res = pd.concat([df_rev['text'][:10], df_rev['stars'][:10], hp.get_sentiment(df_rev[:10])], axis=1, ignore_index=True)
-
 # %% get distribution of sentiment scores:
 _ = hp.get_sentiment_distribution(df_rev, bins=100, plot=True)
 

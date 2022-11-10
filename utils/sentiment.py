@@ -4,9 +4,11 @@ A couple pre-trained sentiment analysis models that I will test:
 * TextBlob - No paper for this one, but it is a very popular library
 * Happy Transformer
 """
+import torch
 from tokenize import Number
 from unittest import result
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from transformers import TextClassificationPipeline
 from happytransformer import HappyTextClassification
 from happytransformer.happy_text_classification import TextClassificationResult
 
@@ -185,10 +187,35 @@ class Happy(SentimentAnalysis):
         else:
             raise Exception("Invalid type for text. Must be str or pd.DataFrame")
         
-    def get_sentiment_distribution(self, df: pd.DataFrame, bins=100, plot=False, score='score'):   
+    def get_sentiment_gpu(self, text: pd.DataFrame, batch_size=128):
+        """
+        Uses GPU to get sentiment. Requires CUDA enabled GPU.
+        """
+        
+        self.classifier._pipeline._batch_size = batch_size
+        result = self.classifier._pipeline( # returns list of dicts with keys [label, score]
+            text['text'].str.slice(0,self.INPUT_MAX_LEN).tolist()) 
+        
+        def get_score(result : dict):
+            assert type(result['score']) is float, "Invalid score type. Must be float not %s" % type(result.score)
+            score = 0 # neutral is 0
+            
+            if result['label'] == self.labels[0]: # Neg
+                score = -result['score']
+            elif result['label'] == self.labels[-1]: # Pos
+                score = result['score']
+            return score
+        
+        return pd.Series([get_score(x) for x in result])
+    
+    def get_sentiment_distribution(self, df: pd.DataFrame, bins=100, plot=False, score='score', use_cuda=True):
         assert score == "score", "Invalid score. Must be 'score'" # only score is available (see get_sentiment)
         
-        scores = self.get_sentiment(df)[score] 
+        if use_cuda:
+            assert torch.cuda.is_available(), "CUDA is not available. Cannot use GPU"
+            scores = self.get_sentiment_gpu(df)
+        else:
+            scores = self.get_sentiment(df)[score]
         
         # Get distribution of the scores
         hist = np.histogram(scores.dropna(), bins=bins) # returns (frequencies, bins)
