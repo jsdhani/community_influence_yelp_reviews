@@ -9,7 +9,8 @@ class QueryYelp:
 
     @staticmethod
     def get_json_reader(
-            file: object
+            file: object,
+            chunksize: int = raw_read_chunk_size,
     ):
         """
         Return a JSONReader object for the provided file object.
@@ -17,6 +18,7 @@ class QueryYelp:
         actual JSON contents. The chunk size used here has
         been pre-defined in the constants section.
         :param file: file object for the specific filename
+        :param chunksize: number of lines to read at a time (optional)
         :return: JSONReader object
         """
 
@@ -24,7 +26,7 @@ class QueryYelp:
                     path_or_buf=file,
                     orient="records",
                     lines=True,
-                    chunksize=raw_read_chunk_size
+                    chunksize=chunksize,
         )
 
     @staticmethod

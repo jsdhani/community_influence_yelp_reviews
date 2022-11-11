@@ -3,71 +3,38 @@ I am just using this as a test bed for now, please excuse the mess...
 """
 
 # %%
-# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from utils.query_raw_yelp import QueryYelp as qy
-from utils.sentiment import VADER, TBlob, Happy
-from common.config_paths import YELP_DATA
+from data_analysis.review_prob import ReviewProb
+from common.config_paths import YELP_REVIEWS_PATH, YELP_BUSINESS_PATH, YELP_USER_PATH
+import matplotlib.pyplot as plt
 import pandas as pd
-
-# %% file location:
-REVIEW = YELP_DATA + "yelp_dataset/yelp_academic_dataset_review.json"
-
-# %% get the data:
-reader = qy.get_json_reader(REVIEW)
-# combining multiple chunks into one dataframe
-df_rev = next(reader) # 1000 rows
-for i in range(500): # 10,000 rows
-    chunk = next(reader)
-    df_rev = pd.concat([df_rev, chunk], ignore_index=True)
-    
-
-#######################################################
-# %% Happy Transformer:
-hp = Happy(model_type="DISTILBERT")
+import numpy as np
 
 
-# %% get the sentiment of 10 reviews:
-# pd.set_option("display.max_colwidth", None)
-# pd.set_option('display.colheader_justify', 'right')
-# res = pd.concat([df_rev['text'][:10], df_rev['stars'][:10], hp.get_sentiment(df_rev[:10])], axis=1, ignore_index=True)
-# %% get distribution of sentiment scores:
-_ = hp.get_sentiment_distribution(df_rev, bins=100, plot=True)
+# %% Get the data
+b_reader = qy.get_json_reader(YELP_BUSINESS_PATH, chunksize=1000)
 
-#######################################################
-# %% VADER:
-v_mdl = VADER()
-
-length, dist_l = v_mdl.get_review_length_distribution(df_rev, bins=100, plot=True)
-scores, dist_s = v_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True)
-
-# %% splitting into short reviews and long reviews
-cf = 200
-df_rev_short = df_rev[df_rev['text'].str.len() < cf]
-df_rev_long = df_rev[df_rev['text'].str.len() >= cf]
-
-print(len(df_rev_short), len(df_rev_long))
-
-# %% displaying sentiment distribution with short reviews
-scores_short, dist_short = v_mdl.get_sentiment_distribution(df_rev_short, bins=100, plot=True)
-
-# %% displaying sentiment distribution with long reviews
-scores_long, dist_long = v_mdl.get_sentiment_distribution(df_rev_long, bins=100, plot=True)
-
-
-# %% calculating correlation between star rating and sentiment
-stars = df_rev['stars']
-data = pd.concat([stars, scores, length], axis=1)
-print(data.groupby('stars').mean())
-print(data.corr())
-
-
-
-#######################################################
-# %% TEXTBLOB:
-tb_mdl = TBlob()
-
-scores, dist_s = tb_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True)
-_ = tb_mdl.get_sentiment_distribution(df_rev, bins=100, plot=True, score="subjectivity")
-
+# Only getting 100 businesses for now:
+CUTTOFF = 100
 
 # %%
+# All we need from the business is their ID so everything else can be ignored
+b_ids = np.array([])
+for chunk in b_reader:    
+    b_df = chunk[["business_id","review_count"]].dropna()
+    # Businesses with > 50 reviews captures 28K/150K businesses
+    b_df = b_df[(b_df["review_count"] > 500)] # high review count businesses for now
+    
+    # sampling  businesses
+    sample_size = min(CUTTOFF-len(b_ids), len(b_df))
+    b_ids = np.append(b_ids, b_df["business_id"].sample(sample_size).values)
+    
+    if len(b_ids) >= CUTTOFF: # cut off
+        break
+    
+# %% Iterate through the reviews and create dictionary of user ids and their reviews
+
+# iterate through users and put them into a dictionary with the key being the user id
+    # and the value being another dict of business ids that they have reviewed
+    # and the value of that dict is the review text
+# this allows for constant time look up of the reviews of a user and business
