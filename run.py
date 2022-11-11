@@ -3,8 +3,9 @@ I am just using this as a test bed for now, please excuse the mess...
 """
 
 # %%
-from utils.query_raw_yelp import QueryYelp as qy
 from data_analysis.review_prob import ReviewProb
+from common.config_paths import YELP_REVIEWS_PATH, YELP_USER_PATH, MT_RESULTS_PATH
+from utils.query_raw_yelp import QueryYelp as qy
 
 
 
@@ -106,37 +107,37 @@ rev_prob.get_prob(plot=True, save=True)
 #             else: # if the user has not reviewed this business we add it with the review id
 #                 USERS[usr_id]["businesses"][b_id] = {r_id}
 
-# rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
-# # populates USERS with their reviews (this will miss users with no reviews)
-# for chunk in tqdm(rr): #reviews has columns: review_id, user_id, business_id, stars, useful, funny, cool, text, date
-#     for usr_id, bus_id, rev_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
-#         if usr_id in USERS:
-#             if bus_id in USERS[usr_id]["businesses"]:
-#                 USERS[usr_id]["businesses"][bus_id].add(rev_id)
-#             else: # if the user has not reviewed this business we add it with the review id
-#                 USERS[usr_id]["businesses"][bus_id] = {rev_id}
-#         else: # User has not been seen before
-#             USERS[usr_id] = {"network": None, # this will be populated when we iterate through the users
-#                              "businesses": {bus_id: {rev_id}}}
-#         # limiting number of users
-#         if MAX_USERS and len(USERS) >= MAX_USERS:
-#             break
-#     else: # if the for loop didn't break
-#         continue
-#     break
+rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
+# we start with the reviews to filter specific time periods
+for chunk in tqdm(rr): #reviews has columns: review_id, user_id, business_id, stars, useful, funny, cool, text, date
+    for usr_id, bus_id, rev_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
+        if usr_id in USERS:
+            if bus_id in USERS[usr_id]["businesses"]:
+                USERS[usr_id]["businesses"][bus_id].add(rev_id)
+            else: # if the user has not reviewed this business we add it with the review id
+                USERS[usr_id]["businesses"][bus_id] = {rev_id}
+        else: # User has not been seen before
+            USERS[usr_id] = {"network": None, # this will be populated when we iterate through the users
+                             "businesses": {bus_id: {rev_id}}}
+        # limiting number of users
+        if MAX_USERS and len(USERS) >= MAX_USERS:
+            break
+    else: # if the for loop didn't break
+        continue
+    break
 
-# #%% now we iterate through the users and to populate their network
-# ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
-# for chunk in tqdm(ur):
-#     for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
-#         # again we are ignoring users with no reviews
-#         if usr_id in USERS:
-#             f_ids = set([x.strip() for x in f_ids.split(",")])
+#%% now we iterate through the users and to populate their network
+ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
+for chunk in tqdm(ur):
+    for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
+        # again we are ignoring users with no reviews
+        if usr_id in USERS:
+            f_ids = set([x.strip() for x in f_ids.split(",")])
             
-#             if len(f_ids) > 0:
-#                 USERS[usr_id]["network"] = f_ids
-#             else:
-#                 del USERS[usr_id] # removing users with no friends
+            if len(f_ids) > 0:
+                USERS[usr_id]["network"] = f_ids
+            else:
+                del USERS[usr_id] # removing users with no friends
 
 # # %% to get the probabilities we preform the following monte carlo simulation:
 # prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
