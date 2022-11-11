@@ -5,15 +5,29 @@ I am just using this as a test bed for now, please excuse the mess...
 # %%
 from utils.query_raw_yelp import QueryYelp as qy
 from data_analysis.review_prob import ReviewProb
-from common.config_paths import YELP_REVIEWS_PATH, YELP_BUSINESS_PATH, YELP_USER_PATH
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
-import pickle
 
 
-# # %% Get the data
+
+rev_prob = ReviewProb(max_users=10000, chunksize=1000)
+# %%
+rev_prob.prep_data()
+
+# %%
+rev_prob.get_prob(plot=True, save=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+#  %% Get the data
 # b_reader = qy.get_json_reader(YELP_BUSINESS_PATH, chunksize=1000)
 
 # # Only getting 100 businesses for now:
@@ -92,67 +106,67 @@ import pickle
 #             else: # if the user has not reviewed this business we add it with the review id
 #                 USERS[usr_id]["businesses"][b_id] = {r_id}
 
-rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
-# populates USERS with their reviews (this will miss users with no reviews)
-for chunk in tqdm(rr): #reviews has columns: review_id, user_id, business_id, stars, useful, funny, cool, text, date
-    for usr_id, bus_id, rev_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
-        if usr_id in USERS:
-            if bus_id in USERS[usr_id]["businesses"]:
-                USERS[usr_id]["businesses"][bus_id].add(rev_id)
-            else: # if the user has not reviewed this business we add it with the review id
-                USERS[usr_id]["businesses"][bus_id] = {rev_id}
-        else: # User has not been seen before
-            USERS[usr_id] = {"network": None, # this will be populated when we iterate through the users
-                             "businesses": {bus_id: {rev_id}}}
-        # limiting number of users
-        if MAX_USERS and len(USERS) >= MAX_USERS:
-            break
-    else: # if the for loop didn't break
-        continue
-    break
+# rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
+# # populates USERS with their reviews (this will miss users with no reviews)
+# for chunk in tqdm(rr): #reviews has columns: review_id, user_id, business_id, stars, useful, funny, cool, text, date
+#     for usr_id, bus_id, rev_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
+#         if usr_id in USERS:
+#             if bus_id in USERS[usr_id]["businesses"]:
+#                 USERS[usr_id]["businesses"][bus_id].add(rev_id)
+#             else: # if the user has not reviewed this business we add it with the review id
+#                 USERS[usr_id]["businesses"][bus_id] = {rev_id}
+#         else: # User has not been seen before
+#             USERS[usr_id] = {"network": None, # this will be populated when we iterate through the users
+#                              "businesses": {bus_id: {rev_id}}}
+#         # limiting number of users
+#         if MAX_USERS and len(USERS) >= MAX_USERS:
+#             break
+#     else: # if the for loop didn't break
+#         continue
+#     break
 
-#%% now we iterate through the users and to populate their network
-ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
-for chunk in tqdm(ur):
-    for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
-        # again we are ignoring users with no reviews
-        if usr_id in USERS:
-            f_ids = set([x.strip() for x in f_ids.split(",")])
+# #%% now we iterate through the users and to populate their network
+# ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
+# for chunk in tqdm(ur):
+#     for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
+#         # again we are ignoring users with no reviews
+#         if usr_id in USERS:
+#             f_ids = set([x.strip() for x in f_ids.split(",")])
             
-            if len(f_ids) > 0:
-                USERS[usr_id]["network"] = f_ids
-            else:
-                del USERS[usr_id] # removing users with no friends
+#             if len(f_ids) > 0:
+#                 USERS[usr_id]["network"] = f_ids
+#             else:
+#                 del USERS[usr_id] # removing users with no friends
 
-# %% to get the probabilities we preform the following monte carlo simulation:
-prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
-for usr_id in tqdm(USERS):
-    usr = USERS[usr_id]
-    for b in usr["businesses"]:
-        num_rev = 0
-        for friend_id in usr["network"]:
-            # users with no reviews are not in the USERS dictionary
-            if friend_id in USERS and b in USERS[friend_id]["businesses"]: # constant time lookup
-                num_rev += 1
+# # %% to get the probabilities we preform the following monte carlo simulation:
+# prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
+# for usr_id in tqdm(USERS):
+#     usr = USERS[usr_id]
+#     for b in usr["businesses"]:
+#         num_rev = 0
+#         for friend_id in usr["network"]:
+#             # users with no reviews are not in the USERS dictionary
+#             if friend_id in USERS and b in USERS[friend_id]["businesses"]: # constant time lookup
+#                 num_rev += 1
         
-        # add to the probabilities dictionary or create it
-        if num_rev in prob_counts:
-            prob_counts[num_rev] += 1
-        else:
-            prob_counts[num_rev] = 1
+#         # add to the probabilities dictionary or create it
+#         if num_rev in prob_counts:
+#             prob_counts[num_rev] += 1
+#         else:
+#             prob_counts[num_rev] = 1
 
-# Saving the probabilities as a csv with the columns: num_friends, num_instances
-with open('pr-user_reviews-num_friends.pkl', 'wb') as f:
-    pickle.dump(prob_counts, f)
+# # Saving the probabilities as a csv with the columns: num_friends, num_instances
+# with open('pr-user_reviews-num_friends.pkl', 'wb') as f:
+#     pickle.dump(prob_counts, f)
 
 
-# %% plotting the probabilities of prob_counts:
-prob_sorted = sorted(prob_counts.items())
-plt.scatter([x[0] for x in prob_sorted][3:],
-            [y[1] for y in prob_sorted][3:])
-plt.xlabel("friend counts")
-plt.ylabel("Frequency")
-plt.show()
+# # %% plotting the probabilities of prob_counts:
+# prob_sorted = sorted(prob_counts.items())
+# plt.scatter([x[0] for x in prob_sorted][3:],
+#             [y[1] for y in prob_sorted][3:])
+# plt.xlabel("friend counts")
+# plt.ylabel("Frequency")
+# plt.show()
 
 # this should also run in O(b*n^2) 
 # will use this to validate that i havent missed anything in the first method

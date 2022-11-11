@@ -23,25 +23,23 @@ We use Monte Carlo methods to get the probabilities by:
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import pandas as pd
-import numpy as np
+import pickle
 
-from data_analysis.sentiment_models import SentimentAnalysis
 from utils.query_raw_yelp import QueryYelp as qy
 from common.config_paths import (
-    YELP_REVIEWS_PATH, 
-    YELP_BUSINESS_PATH, 
-    YELP_USER_PATH)
+    YELP_REVIEWS_PATH,
+    YELP_USER_PATH, 
+    MT_RESULTS_PATH)
 
 class ReviewProb:
-    def __init__(self, df: pd.DataFrame, model: SentimentAnalysis):
-        self.df = df
-        self.model = model
-        self.scores = None
-        self.lengths = None
-        self.prob = None
+    def __init__(self, max_users=None, chunksize=1000) -> None:
+        self.MAX_USERS = max_users
+        self.CHUNKSIZE = chunksize
         
-    def prep_data(self, max_users=None, chunksize=1000):
+        self.prob = None
+        self.SAVE_PATH = f'{MT_RESULTS_PATH}pr-user_reviews-num_friends-{self.MAX_USERS}.pkl'
+    
+    def prep_data(self):
         """
         Prepares the data for performing monte carlo sampling.
         
@@ -55,62 +53,74 @@ class ReviewProb:
                 #                 "businesses": {business_ID: (review_ID)}
                 #                 }
                 #             }
-                
+        
         This method uses method 2.
         """
-        # Iterate through the reviews and create dictionary of user ids and their network
-        rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=chunksize)
+        # Iterate through the users and create dictionary of user ids and their network
+        print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
         self.users = {}
-        MAX_USERS = max_users
-        # Populates USERS with all the reviews (this will miss users with no reviews)
-        for chunk in tqdm(rr):
-            for u_id, b_id, r_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
-                if u_id in self.users:
-                    if b_id in self.users[u_id]["businesses"]:
-                        self.users[u_id]["businesses"][b_id].add(r_id)
-                    else: # if the user has not reviewed this business we add it with the review id
-                        self.users[u_id]["businesses"][b_id] = {r_id}
-                else: # User has not been seen before
-                    self.users[u_id] = {"network": None, # this will be populated when we iterate through the users
-                                    "businesses": {b_id: {r_id}}}
-                # limiting number of users
-                if MAX_USERS and len(self.users) >= MAX_USERS:
-                    break
-            else: # if the for loop didn't break
-                continue
-            break
-
-        # now we iterate through the users and to populate their network
-        ur = qy.get_json_reader(YELP_USER_PATH, chunksize=chunksize)
-        for chunk in tqdm(ur):
-            for u_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
-                # again we are ignoring users with no reviews
-                if u_id in self.users:
+        for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE)):
+            for usr_id, f_ids, r_c in zip(chunk["user_id"], chunk["friends"], chunk['review_count']):
+                # We are ignoring users with no reviews
+                if r_c > 0:
                     f_ids = set([x.strip() for x in f_ids.split(",")])
-                    
-                    if len(f_ids) > 0:
-                        self.users[u_id]["network"] = f_ids
-                    else:
-                        del self.users[u_id] # removing users with no friends
+                    # we are ignoring users with no friends
+                    if len(f_ids) > 0: 
+                        self.users[usr_id] = {"network": f_ids, 
+                                              "businesses": {}} # populated later
+                        
+                        if self.MAX_USERS is not None and len(self.users) >= self.MAX_USERS:
+                            break
+            else:
+                continue
+            break # breaks out of outer loop only if we break out of inner loop
 
-    def get_prob(self, n_samples=1000, bins=100, plot=False):
-        """
-        Gets the probability of a review being positive given its length.
+        # populates USERS with their reviews
+        print("Populating user dictionary with reviews...\n\t(<2mins for all reviews on intel i9-12900k)")
+        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE)):
+            for usr_id, b_id, r_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
+                if usr_id in self.users:
+                    if b_id in self.users[usr_id]["businesses"]:
+                        self.users[usr_id]["businesses"][b_id].add(r_id)
+                    else: # if the user has not reviewed this business we add it with the review id
+                        self.users[usr_id]["businesses"][b_id] = {r_id}
+        print("Finished prepping data!")
+        return self.users
+    
+    def get_prob(self, plot=True, save=True):
+        # To get the probabilities we preform the following monte carlo simulation:
+        prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
+        for usr_id in tqdm(self.users):
+            usr = self.users[usr_id]
+            for b in usr["businesses"]:
+                num_rev = 0
+                for friend_id in usr["network"]:
+                    # users with no reviews are not in the USERS dictionary
+                    if (friend_id in self.users and 
+                        b in self.users[friend_id]["businesses"]): # constant time lookup
+                        num_rev += 1
+                
+                # add to the probabilities dictionary or create it
+                if num_rev in prob_counts:
+                    prob_counts[num_rev] += 1
+                else:
+                    prob_counts[num_rev] = 1
 
-        Args:
-            n_samples (int, optional): Number of samples to take. Defaults to 1000.
-            bins (int, optional): Number of bins to use when counting frequencies. Defaults to 100.
-            plot (bool, optional): flag to plot distribution. Defaults to False.
-
-        Returns:
-            (pd.Series, Tuple(np.array,np.array)): tuple of the review lengths and their distribution (review lengths, (freq, bins))
-        """
-        # Get the sentiment scores for the reviews
-        self.scores = self.model.get_sentiment(self.df)
-        # Get the review lengths
-        self.lengths = self.df["text"].apply(lambda x: len(x))
-        # Get the probability of a review being positive given its length
-        self.prob = self._get_prob(self.scores, self.lengths, n_samples, bins)
+        # normalize to get probabilities
+        total = sum(prob_counts.values())
+        self.prob = {k: v/total for k, v in prob_counts.items()}
+        
+        if save:
+            # Saving the probabilities as a csv with the columns: num_friends, num_instances
+            with open(self.SAVE_PATH, 'wb') as f:
+                pickle.dump(self.prob, f)
+                
         if plot:
-            self._plot_prob(self.prob)
-        return self.prob 
+            prob_sorted = sorted(self.prob.items())
+            plt.scatter([x[0] for x in prob_sorted],
+                        [y[1] for y in prob_sorted])
+            plt.xlabel("friend counts")
+            plt.ylabel("Frequency")
+            plt.show()
+            
+        return self.prob
