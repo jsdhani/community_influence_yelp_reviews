@@ -6,138 +6,88 @@ I am just using this as a test bed for now, please excuse the mess...
 from data_analysis.review_prob import ReviewProb
 from common.config_paths import YELP_REVIEWS_PATH, YELP_USER_PATH, MT_RESULTS_PATH
 from utils.query_raw_yelp import QueryYelp as qy
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import pandas as pd
+import pickle
 
 
+# IDEA: weight people with more friends more heavily -> they give us more information about probability of a review
+# only focus on people with significant number of friends
+# USERS['E6ATm0wReAmoFZjs_jHKcQ']
 
-rev_prob = ReviewProb(max_users=10000, chunksize=1000)
-# %%
-rev_prob.prep_data()
-
-# %%
-rev_prob.get_prob(plot=True, save=True)
-
-
-
-
-
-
-
-
+rp = ReviewProb()
+rp.prep_data_range(date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')))
+rp.get_prob(plot=True, save=True)
 
 
 
 
 
-#  %% Get the data
-# b_reader = qy.get_json_reader(YELP_BUSINESS_PATH, chunksize=1000)
 
-# # Only getting 100 businesses for now:
-# CUTTOFF = 100
 
-# # %%
-# # All we need from the business is their ID so everything else can be ignored
-# b_ids = np.array([])
-# for chunk in b_reader:    
-#     b_df = chunk[["business_id","review_count"]].dropna()
-#     # Businesses with > 50 reviews captures 28K/150K businesses
-#     b_df = b_df[(b_df["review_count"] > 500)] # high review count businesses for now
-    
-#     # sampling  businesses
-#     sample_size = min(CUTTOFF-len(b_ids), len(b_df))
-#     b_ids = np.append(b_ids, b_df["business_id"].sample(sample_size).values)
-    
-#     if len(b_ids) >= CUTTOFF: # cut off
-#         break
-    
-####### METHOD 1: iterating through businesses first #######
-# USERS:      {ID: (friends_ID)} # friends_ID is a set of user ids for constant time lookup
-# BUSINESSES: {ID: (Usr_ID)}  # Usr_ID is also a set
-    # Assuming we created the data structure above we now preform the following:
-    #    Note that this will miss P(User writes a review | 0 friends wrote a review)?
-    #        ^ This isn't actually true but I feel like Im still missing something related to this
-        # prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
-        # for usr_ids in BUSINESSES:
-        #     for id in usr_ids:
-        #         num_rev = 0
-        #         for friend_id in USERS[id]:
-        #             if friend_id in usr_ids:
-        #                 num_rev += 1
-                
-        #         # add to the probabilities dictionary or create it
-        #         if num_rev in prob_counts:
-        #             prob_counts[num_rev] += 1
-        #         else:
-        #             prob_counts[num_rev] = 1
 
-    # in the worst case everyone is friends with everyone and so this would run in O(b*n^2) 
-    # where n is the number of users and b is the number of businesses
-    
-####### METHOD 2: iterating through users first #######
-# USERS:    {ID: {"network": (friends_ID), 
-#               "businesses": {business_ID: (review_ID)}
-#               }
-#           }
-# # %% Iterate through the users and create dictionary of user ids and their network
-# USERS = {}
-# MAX_USERS = None
-# ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
-# for chunk in tqdm(ur):
-#     for usr_id, f_ids, r_c in zip(chunk["user_id"], chunk["friends"], chunk['review_count']):
-#         # we are ignoring users with no reviews
-#         if r_c > 0:
-#             f_ids = set([x.strip() for x in f_ids.split(",")])
-#             if len(f_ids) > 0: # we are ignoring users with no friends
-#                 USERS[usr_id] = {"network": f_ids, 
-#                                  "businesses": {}} # we will fill this in later
-                
-#                 if MAX_USERS is not None and len(USERS) >= MAX_USERS:
-#                     break
-#     else:
-#         continue
-#     break # breaks out of outer loop only if we break out of inner loop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # # %%
 # rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
-# # populates USERS with their reviews
+# # we start with the reviews to filter specific time periods
+# USERS = {}
+# MAX_USERS = 10000
+# date_range = (pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))
 # for chunk in tqdm(rr):
-#     for usr_id, b_id, r_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
-#         if usr_id in USERS:
-#             if b_id in USERS[usr_id]["businesses"]:
-#                 USERS[usr_id]["businesses"][b_id].add(r_id)
-#             else: # if the user has not reviewed this business we add it with the review id
-#                 USERS[usr_id]["businesses"][b_id] = {r_id}
+#     for usr_id, bus_id, rev_id, date in zip(
+#                     chunk["user_id"], chunk["business_id"], 
+#                     chunk["review_id"], chunk["date"]):     
+        
+#         # ensuring that we only get reviews from 2019-12-01 to 2021-08-01 (YYYY-MM-DD)
+#         if date >= date_range[0] and date <= date_range[1]:
+#             if usr_id not in USERS:
+#                 USERS[usr_id] = {"businesses": {bus_id: [rev_id]}} # network is added later
+#             else:
+#                 if bus_id not in USERS[usr_id]["businesses"]:
+#                     USERS[usr_id]["businesses"][bus_id] = [rev_id]
+#                 else:
+#                     USERS[usr_id]["businesses"][bus_id].append(rev_id)
+    
+#             # limiting number of users for space constraints
+#             if MAX_USERS and len(USERS) >= MAX_USERS:
+#                 break
+#     else: # if the for loop didn't break
+#         continue
+#     break
 
-rr = qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=1000)
-# we start with the reviews to filter specific time periods
-for chunk in tqdm(rr): #reviews has columns: review_id, user_id, business_id, stars, useful, funny, cool, text, date
-    for usr_id, bus_id, rev_id in zip(chunk["user_id"], chunk["business_id"], chunk["review_id"]):        
-        if usr_id in USERS:
-            if bus_id in USERS[usr_id]["businesses"]:
-                USERS[usr_id]["businesses"][bus_id].add(rev_id)
-            else: # if the user has not reviewed this business we add it with the review id
-                USERS[usr_id]["businesses"][bus_id] = {rev_id}
-        else: # User has not been seen before
-            USERS[usr_id] = {"network": None, # this will be populated when we iterate through the users
-                             "businesses": {bus_id: {rev_id}}}
-        # limiting number of users
-        if MAX_USERS and len(USERS) >= MAX_USERS:
-            break
-    else: # if the for loop didn't break
-        continue
-    break
-
-#%% now we iterate through the users and to populate their network
-ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
-for chunk in tqdm(ur):
-    for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
-        # again we are ignoring users with no reviews
-        if usr_id in USERS:
-            f_ids = set([x.strip() for x in f_ids.split(",")])
+# #%% now we iterate through the users and to populate their network
+# ur = qy.get_json_reader(YELP_USER_PATH, chunksize=1000)
+# for chunk in tqdm(ur):
+#     for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
+#         # again we are ignoring users with no reviews and users with no friends in our time period
+#         if usr_id in USERS and f_ids != "None":
+#             f_ids = set([x.strip() for x in f_ids.split(",")])
             
-            if len(f_ids) > 0:
-                USERS[usr_id]["network"] = f_ids
-            else:
-                del USERS[usr_id] # removing users with no friends
+#             if len(f_ids) > 0:
+#                 USERS[usr_id]["network"] = f_ids
+#             else:
+#                 del USERS[usr_id] # removing users with no friends
 
 # # %% to get the probabilities we preform the following monte carlo simulation:
 # prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
@@ -168,13 +118,3 @@ for chunk in tqdm(ur):
 # plt.xlabel("friend counts")
 # plt.ylabel("Frequency")
 # plt.show()
-
-# this should also run in O(b*n^2) 
-# will use this to validate that i havent missed anything in the first method
-
-# iterate through users and put them into a dictionary with the key being the user id
-    # and the value being another dict of business ids that they have reviewed
-    # and the value of that dict is the review text
-# this allows for constant time look up of the reviews of a user and business
-
-# %%

@@ -24,6 +24,7 @@ We use Monte Carlo methods to get the probabilities by:
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle
+import pandas as pd
 
 from utils.query_raw_yelp import QueryYelp as qy
 from common.config_paths import (
@@ -36,8 +37,62 @@ class ReviewProb:
         self.MAX_USERS = max_users
         self.CHUNKSIZE = chunksize
         
-        self.prob = None
+        self.prob = {}
+        self.users = {}
         self.SAVE_PATH = f'{MT_RESULTS_PATH}pr-user_reviews-num_friends-{self.MAX_USERS}.pkl'
+    
+    def prep_data_range(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))):
+        """
+        Prepares the data for performing monte carlo sampling of reviews within a certain period of time.
+
+        Args:
+            date_range (tuple, optional): time periods in pd.Timestamp form. 
+                Defaults to ('2019-12-01', '2021-08-01').
+        """ 
+        # we start with the reviews to filter specific time periods
+        print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
+        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE)):
+            for usr_id, bus_id, rev_id, date in zip(
+                            chunk["user_id"], chunk["business_id"], 
+                            chunk["review_id"], chunk["date"]):     
+                
+                # ensuring that we only get reviews from specific time range (YYYY-MM-DD)
+                if date >= date_range[0] and date <= date_range[1]:
+                    if usr_id not in self.users:
+                        self.users[usr_id] = {"businesses": {bus_id: [rev_id]}} # network is added later
+                    else:
+                        if bus_id not in self.users[usr_id]["businesses"]:
+                            self.users[usr_id]["businesses"][bus_id] = [rev_id]
+                        else:
+                            self.users[usr_id]["businesses"][bus_id].append(rev_id)
+            
+                    # limiting number of users for space constraints
+                    if self.MAX_USERS and len(self.users) >= self.MAX_USERS:
+                        break
+            else: # if the for loop didn't break
+                continue
+            break
+
+        # now we iterate through the users and to populate their network
+        print("Populating user dictionary with reviews...\n\t(<2mins for all reviews on intel i9-12900k)")
+        for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE)):
+            for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
+                # again we are ignoring users with no reviews and users with no friends in our time period
+                if usr_id in self.users and f_ids != "None":
+                    f_ids = set([x.strip() for x in f_ids.split(",")])
+                    
+                    if len(f_ids) > 0:
+                        self.users[usr_id]["network"] = f_ids
+                    else:
+                        del self.users[usr_id] # removing users with no friends
+                        
+        # final check to remove users with no reviews or no friends
+        print("Finished prepping data! Performing final check...")
+        no_network = [k for k,v in self.users.items() if "network" not in v]
+        for k in no_network:
+            del self.users[k]
+            
+        return self.users
     
     def prep_data(self):
         """
@@ -58,19 +113,16 @@ class ReviewProb:
         """
         # Iterate through the users and create dictionary of user ids and their network
         print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
-        self.users = {}
         for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE)):
             for usr_id, f_ids, r_c in zip(chunk["user_id"], chunk["friends"], chunk['review_count']):
-                # We are ignoring users with no reviews
-                if r_c > 0:
+                # We are ignoring users with no reviews OR no friends
+                if not (r_c == 0 or f_ids == "None"):
                     f_ids = set([x.strip() for x in f_ids.split(",")])
-                    # we are ignoring users with no friends
-                    if len(f_ids) > 0: 
-                        self.users[usr_id] = {"network": f_ids, 
-                                              "businesses": {}} # populated later
-                        
-                        if self.MAX_USERS is not None and len(self.users) >= self.MAX_USERS:
-                            break
+                    self.users[usr_id] = {"network": f_ids, 
+                                            "businesses": {}} # populated later
+                    
+                    if self.MAX_USERS is not None and len(self.users) >= self.MAX_USERS:
+                        break
             else:
                 continue
             break # breaks out of outer loop only if we break out of inner loop
@@ -84,7 +136,13 @@ class ReviewProb:
                         self.users[usr_id]["businesses"][b_id].add(r_id)
                     else: # if the user has not reviewed this business we add it with the review id
                         self.users[usr_id]["businesses"][b_id] = {r_id}
-        print("Finished prepping data!")
+        
+        # final check to remove users with no reviews or no friends
+        print("Finished prepping data! Performing final check...")
+        no_network = [k for k,v in self.users.items() if "network" not in v]
+        for k in no_network:
+            del self.users[k]
+                
         return self.users
     
     def get_prob(self, plot=True, save=True):
