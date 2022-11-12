@@ -1,4 +1,4 @@
-YELP_DATA = "data/raw/yelp/"
+YELP_DATA = "/data/raw/yelp/"
 YELP_DATA_PATH_FN = lambda x: f"{YELP_DATA}yelp_dataset/yelp_academic_dataset_{x}.json"
 
 YELP_REVIEWS_PATH   = YELP_DATA_PATH_FN("review")
