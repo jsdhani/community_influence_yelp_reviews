@@ -118,3 +118,4 @@ rp.get_prob(plot=True, save=True)
 # plt.xlabel("friend counts")
 # plt.ylabel("Frequency")
 # plt.show()
+# %%

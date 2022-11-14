@@ -5,10 +5,7 @@ A couple pre-trained sentiment analysis models that I will test:
 * Happy Transformer
 """
 import torch
-from tokenize import Number
-from unittest import result
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from transformers import TextClassificationPipeline
 from happytransformer import HappyTextClassification
 from happytransformer.happy_text_classification import TextClassificationResult
 
