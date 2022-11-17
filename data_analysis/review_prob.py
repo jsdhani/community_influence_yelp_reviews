@@ -50,6 +50,10 @@ class ReviewProb:
             date_range (tuple, optional): time periods in pd.Timestamp form. 
                 Defaults to ('2019-12-01', '2021-08-01').
         """
+        # chaning the save path to reflect the date range
+        self.SAVE_PATH = self.SAVE_PATH_FN(
+                f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
+        
         # we start with the reviews to filter specific time periods
         print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
         for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE)):
@@ -187,6 +191,12 @@ class ReviewProb:
     
     
 if __name__ == "__main__":
+    # prob before covid
+    rp = ReviewProb()
+    rp.prep_data_range(date_range=(pd.Timestamp.min, pd.Timestamp('2019-12-01')))
+    rp.get_prob(plot=False, save=True)
+    
+    # prob after covid
     rp = ReviewProb()
     rp.prep_data_range(date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')))
     rp.get_prob(plot=False, save=True)
