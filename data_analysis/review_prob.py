@@ -39,7 +39,8 @@ class ReviewProb:
         
         self.prob = {}
         self.users = {}
-        self.SAVE_PATH = f'{MT_RESULTS_PATH}pr-user_reviews-num_friends-{self.MAX_USERS}.pkl'
+        self.SAVE_PATH_FN = lambda x: f"{MT_RESULTS_PATH}ReviewProb_{self.MAX_USERS}-{x}.pkl" # x is a placeholder for the date range
+        self.SAVE_PATH = self.SAVE_PATH_FN("all") # default is entire date range
     
     def prep_data_range(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))):
         """
@@ -48,7 +49,7 @@ class ReviewProb:
         Args:
             date_range (tuple, optional): time periods in pd.Timestamp form. 
                 Defaults to ('2019-12-01', '2021-08-01').
-        """ 
+        """
         # we start with the reviews to filter specific time periods
         print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
         for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE)):
@@ -182,3 +183,10 @@ class ReviewProb:
             plt.show()
             
         return self.prob
+    
+    
+    
+if __name__ == "__main__":
+    rp = ReviewProb()
+    rp.prep_data_range(date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')))
+    rp.get_prob(plot=False, save=True)
