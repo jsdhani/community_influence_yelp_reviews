@@ -17,19 +17,34 @@ import pickle
 # only focus on people with significant number of friends
 # USERS['E6ATm0wReAmoFZjs_jHKcQ']
 
+# prob before covid
+rp = ReviewProb()
+rp.prep_data_range(date_range=(pd.Timestamp('2018-04-01'), pd.Timestamp('2019-12-01')))
+rp.get_prob(plot=False, save=True, weighted=True)
+
+# prob after covid
+rp = ReviewProb()
+rp.prep_data_range(date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')))
+rp.get_prob(plot=False, save=True, weighted=True)
 
 # %% Loading the ReviewProb object from pickle
-pickle_path_1 = "results/monte_carlo/ReviewProb_10000.pkl"
-pickle_path_a = "results/monte_carlo/ReviewProb_ALL.pkl"
+# pickle_path_1 = "results/monte_carlo/ReviewProb_10000.pkl"
+# pickle_path_a = "results/monte_carlo/ReviewProb_ALL.pkl"
 
+# pp_pre_cov19 = 'results\monte_carlo\ReviewProb_None-1677-09-21_2019-12-01.pkl'
+# pp_preshort_cov19 = 'results\monte_carlo\ReviewProb_None-2018-04-01_2019-12-01.pkl'
+# pp_cov19 = 'results\monte_carlo\ReviewProb_None-2019-12-01_2021-08-01.pkl'
 
-rb_1 = pickle.load(open(pickle_path_1, "rb"))
-rb_a = pickle.load(open(pickle_path_a, "rb"))
+pp_preshort_cov19 = 'results\monte_carlo\W-ReviewProb_None-2018-04-01_2019-12-01.pkl'
+pp_cov19 = 'results\monte_carlo\W-ReviewProb_None-2019-12-01_2021-08-01.pkl'
+
+rb_1 = pickle.load(open(pp_preshort_cov19, "rb"))
+rb_2 = pickle.load(open(pp_cov19, "rb"))
 
 # %% plotting the review probabilities
 
-def plot_prob(prob, thresh=5, normalize=False):
-    prob_sorted = sorted(prob.items())[thresh:]
+def plot_prob(prob, thresh_low=1, thresh_high=10, normalize=False):
+    prob_sorted = sorted(prob.items())[thresh_low:-thresh_high]
     
     # normalizing the values
     if normalize:
@@ -43,10 +58,10 @@ def plot_prob(prob, thresh=5, normalize=False):
     
 # %%
 plt.title("1K users")
-plot_prob(rb_1)
+plot_prob(rb_1, thresh_low=1)
 # plt.show()
 plt.title("All users")
-plot_prob(rb_a, normalize=True)
+plot_prob(rb_2, thresh_low=1)
 plt.show()
 
 # %%
