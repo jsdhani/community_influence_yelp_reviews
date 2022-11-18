@@ -108,7 +108,7 @@ class ReviewProb:
                 # USERS:      {ID: (friends_ID)}
                 # BUSINESSES: {ID: (Usr_ID)}
         
-        ####### METHOD 2: iterating through users first #######
+        ####### METHOD 2: iterating through users first ####### Exclude users with no friends or no reviews
                 # USERS:      {ID: {"network": (friends_ID), 
                 #                 "businesses": {business_ID: (review_ID)}
                 #                 }
@@ -156,24 +156,28 @@ class ReviewProb:
     #     #                 }
     #     #             }
     #     # gets the probability of a i friend(s) reviewing a business
-    #     prob_counts = {} # {friend_count: frequency}
-    #     for usr_id, usr_data in tqdm(self.users.items()):
-    #         f_count = usr_data["network"]
+    #     prob_counts = {}
+    #     for usr_id in tqdm(self.users):
+    #         usr = self.users[usr_id]
+    #         for f in usr["network"]: # looping through their friends
+    #             for b in usr["businesses"]: # looping through reviews made by friends
         
         
-    def get_prob(self, plot=True, save=True, weighted=False):
+    def get_prob(self, plot=True, save=True, weighted=False):        
         # To get the probabilities we preform the following monte carlo simulation:
         prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
         for usr_id in tqdm(self.users):
             usr = self.users[usr_id]
             num_f = len(usr["network"])
-            for b in usr["businesses"]: # looping through businesses reviewed by user
+            # looping through businesses reviewed by user
+            for b in usr["businesses"]: 
                 num_rev = 0
+                # looping through friends of user
                 for friend_id in usr["network"]:
-                    # users with no reviews are not in the USERS dictionary
+                    # users with no reviews are not in the USERS dictionary (should not be an issue as we removed them)
                     if (friend_id in self.users and 
                         b in self.users[friend_id]["businesses"]): # constant time lookup
-                        num_rev += 1
+                        num_rev += 1 # countin number of friends who reviewed the business
                 
                 # add to the probabilities dictionary or create it
                 if num_rev in prob_counts:
@@ -186,8 +190,8 @@ class ReviewProb:
         self.prob = {k: v/total for k, v in prob_counts.items()}
         
         if save:
-            f_name = 'W-' + self.SAVE_PATH.split("/")[-1] if weighted else self.SAVE_PATH
-            f_name = '/'.join(self.SAVE_PATH.split("/")[:-1] + [f_name]) 
+            f_name = '/'.join(self.SAVE_PATH.split("/")[:-1]) +'/W-' \
+                            + self.SAVE_PATH.split("/")[-1] if weighted else self.SAVE_PATH
             # Saving the probabilities as a csv with the columns: num_friends, num_instances
             with open(f_name, 'wb') as f:
                 pickle.dump(self.prob, f)
@@ -207,7 +211,7 @@ class ReviewProb:
 if __name__ == "__main__":
     # prob before covid
     rp = ReviewProb()
-    rp.prep_data_range(date_range=(pd.Timestamp('2018-04-01'), pd.Timestamp('2019-12-01')))
+    rp.prep_data_range(date_range=(pd.Timestamp('2017-04-01'), pd.Timestamp('2018-12-01')))
     rp.get_prob(plot=False, save=True, weighted=True)
     
     # prob after covid
