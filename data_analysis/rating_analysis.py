@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle
 import pandas as pd
+import numpy as np
 
 from utils.query_raw_yelp import QueryYelp as qy
 from common.config_paths import (
@@ -61,9 +62,9 @@ class RatingAnalysis:
         # traverse through the users to get friends
         for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE), 
                                                 desc="Creating network dictionary"):
-            for usr_id, friends in zip(chunk['user_id'], chunk['friends']):
+            for usr_id, f_ids in zip(chunk['user_id'], chunk['friends']):
                 assert usr_id not in self.network, "User ID already in network dictionary"
-                self.network[usr_id] = set(friends)
+                self.network[usr_id] = set([x.strip() for x in f_ids.split(",")])
     
     def get_ratings(self):
         """
@@ -74,7 +75,7 @@ class RatingAnalysis:
         instance is a business-friend group
         """
         ratings = []
-        for bus_id, reviews in self.bus_revs.items():
+        for bus_id, reviews in tqdm(self.bus_revs.items(), desc="Getting ratings"):
             for usr_id, rating in reviews.items():
                 # checking to see if the user is in the network
                 if usr_id in self.network:
@@ -85,7 +86,9 @@ class RatingAnalysis:
                         if friend_id in reviews:
                             avg_friend_rating += reviews[friend_id]
                             num_friends_rated += 1
-                    ratings.append((rating, avg_friend_rating/num_friends_rated))
+                            
+                    if num_friends_rated > 0: # only add to ratings if there are friends that rated the business
+                        ratings.append((rating, avg_friend_rating/num_friends_rated))
                     
         self.ratings = np.array(ratings) # convert to numpy array for easier manipulation
         return self.ratings
@@ -94,9 +97,9 @@ class RatingAnalysis:
         with open(self.SAVE_PATH, 'wb') as f:
             pickle.dump(self.ratings, f)
             
-    def plot_ratings(self, ):
+    def plot_ratings(self, title="Ratings Correlation"):
         plt.scatter(self.ratings[:,0], self.ratings[:,1])
         plt.xlabel("User Rating")
         plt.ylabel("Average Friend Rating")
-        plt.title("User Rating vs Average Friend Rating")
+        plt.title(title)
         plt.show()
