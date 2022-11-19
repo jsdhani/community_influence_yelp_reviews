@@ -33,13 +33,13 @@ from common.config_paths import (
     MT_RESULTS_PATH)
 
 class ReviewProb:
-    def __init__(self, max_users=None, chunksize=1000) -> None:
+    def __init__(self, max_users=None, chunksize=1000, save_path=MT_RESULTS_PATH) -> None:
         self.MAX_USERS = max_users
         self.CHUNKSIZE = chunksize
         
         self.prob = {}
         self.users = {}
-        self.SAVE_PATH_FN = lambda x: f"{MT_RESULTS_PATH}ReviewProb_{self.MAX_USERS}-{x}.pkl" # x is a placeholder for the date range
+        self.SAVE_PATH_FN = lambda x: f"{save_path}ReviewProb_{self.MAX_USERS}-{x}.pkl" # x is a placeholder for the date range
         self.SAVE_PATH = self.SAVE_PATH_FN("all") # default is entire date range
     
     def prep_data_range(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))):
