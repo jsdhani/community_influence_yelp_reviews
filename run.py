@@ -6,7 +6,7 @@ I am just using this as a test bed for now, please excuse the mess...
 from data_analysis.review_prob import ReviewProb
 from common.config_paths import YELP_REVIEWS_PATH, YELP_USER_PATH, MT_RESULTS_PATH, RESULTS
 from utils.query_raw_yelp import QueryYelp as qy
-from data_analysis.correlation_analysis import get_pearson
+from data_analysis.correlation_analysis import get_pearson, get_linear_reg
 from scipy.stats import pearsonr
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -18,29 +18,12 @@ import pickle
 covid_range = (pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))
 len_covid = covid_range[1] - covid_range[0] # 609 days
 time_periods = []
-for x in range(10):
+for x in range(8):
     start = covid_range[0] - (x * len_covid)
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
-
-# # # validating no overlap between time periods
-# # for i,p in enumerate(time_periods):
-# #     p_next = time_periods[i+1] if i < len(time_periods)-1 else None # goes back in time
     
-# #     if p_next and p[0] < p_next[1]: # if the start of the current period is less than the end of the next period
-# #         print(f'ERROR: time periods {p} and {p_next} overlap!')
-# #         break
-# #     else:
-# #         print(f'No overlap between \n\t{p} and \n\t{p_next}')
-    
-# #%%
 new_path = RESULTS + 'BIG_MONTE_CARLO/'
-
-for p in time_periods:
-    print('\n\nTime period:', p)
-    rp = ReviewProb(max_users=None, chunksize=1000, save_path=new_path)
-    rp.prep_data_range(date_range=p)
-    rp.get_prob(plot=True, save=True, weighted=True)
 
 # %% display the monte carlo data
 # display as a chart:
@@ -49,14 +32,13 @@ print("-"*35)
 coeffs = []
 PATH = lambda x: f"{new_path}ReviewProb_None-{x}.pkl"
 for p in time_periods:
-    c+=1
     # if c % 2 == 0: continue
     t_path = PATH(f"{p[0].strftime('%Y-%m-%d')}_{p[1].strftime('%Y-%m-%d')}")
     prob = pickle.load(open(t_path, 'rb'))
-    pear = get_pearson(prob)
+    pear = get_linear_reg(prob)[0]
     period_str = f"{p[0].strftime('%Y-%m')}_{p[1].strftime('%Y-%m')}"
-    coeffs.append(pear.statistic)
-    print("{:15}|{:^10.3}|{:^10.3}".format(period_str, pear.statistic, pear.pvalue))
+    coeffs.append(pear)
+    print("{:15}|{:^10.3}|{:^10.3}".format(period_str, pear, ""))
     
     # also adding to plot:
     prob_sorted = sorted(prob.items())
