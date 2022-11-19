@@ -8,3 +8,4 @@ YELP_TIP_PATH       = YELP_DATA_PATH_FN("tip") # Tips are shorter than reviews a
 
 RESULTS = "results/"
 MC_RESULTS_PATH = f"{RESULTS}monte_carlo/"
+RATINGS_CORR_PATH = f"{RESULTS}ratings/"

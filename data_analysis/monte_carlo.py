@@ -192,7 +192,7 @@ class ReviewProb:
         if save:
             f_name = '/'.join(self.SAVE_PATH.split("/")[:-1]) +'/W-' \
                             + self.SAVE_PATH.split("/")[-1] if weighted else self.SAVE_PATH
-            # Saving the probabilities as a csv with the columns: num_friends, num_instances
+            # Saving the probabilities as a dict pkl with the columns: num_friends, num_instances
             with open(f_name, 'wb') as f:
                 pickle.dump(self.prob, f)
                 
