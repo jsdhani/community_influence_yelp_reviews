@@ -30,10 +30,10 @@ from utils.query_raw_yelp import QueryYelp as qy
 from common.config_paths import (
     YELP_REVIEWS_PATH,
     YELP_USER_PATH, 
-    MT_RESULTS_PATH)
+    MC_RESULTS_PATH)
 
 class ReviewProb:
-    def __init__(self, max_users=None, chunksize=1000, save_path=MT_RESULTS_PATH) -> None:
+    def __init__(self, max_users=None, chunksize=1000, save_path=MC_RESULTS_PATH) -> None:
         self.MAX_USERS = max_users
         self.CHUNKSIZE = chunksize
         

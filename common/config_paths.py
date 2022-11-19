@@ -7,4 +7,4 @@ YELP_USER_PATH      = YELP_DATA_PATH_FN("user")
 YELP_TIP_PATH       = YELP_DATA_PATH_FN("tip") # Tips are shorter than reviews and tend to convey quick suggestions.
 
 RESULTS = "results/"
-MT_RESULTS_PATH = f"{RESULTS}monte_carlo/"
+MC_RESULTS_PATH = f"{RESULTS}monte_carlo/"
