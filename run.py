@@ -28,43 +28,53 @@ for x in range(10):
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
     
-PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall-rest/"
+PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall-no-rest/"
 
 # %% getting data
 for t in time_periods:
     ra = RatingAnalysisGeneral(save_path=PKL_FOLDER_PATH)
     ratings = ra.get_business_rating(date_range=(t[0], t[1]), 
                  filter=restaurant_categories, 
-                 exclude_filter=False)
+                 exclude_filter=True)
     
     ra.save_ratings()
     # ra.plot_ratings(title=
     #                 "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
-    #                                  t[1].strftime('%Y-%m-%d')))
+    #                       t[1].strftime('%Y-%m-%d')))
+    
 
 # %% correlation analysis
-print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
-                                                 "p-value", "slope",
-                                                 "intercept"))
-print("-"*55)
 pears = []
 lines = []
 PATH = lambda x: f"{PKL_FOLDER_PATH}/ratings_{x}.pkl"
-fig_save_path = 'media/'+ PKL_FOLDER_PATH.split('/')[-1]+ '/'
-input(fig_save_path+ "\n"+PATH('TEST'))
+
+fig_save_path = 'media/'+ PKL_FOLDER_PATH.split('/')[-2]+ '/'
+
+# print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
+#                                                  "p-value", "slope",
+#                                                  "intercept"))
+# print("-"*55)
 for t in time_periods:
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)
     data = pickle.load(open(path, 'rb'))
     
-    pear = get_pearson(data, alt="two-sided")
-    line = get_linear_reg(data)
+    # Get distribution of the scores
+    hist = np.histogram(list(data.values()), bins=10)
     
-    pears.append((pear.statistic, pear.pvalue))
-    lines.append(line)
+    plt.stairs(hist[0], hist[1], fill=True)
+    plt.xlabel("Business rating")
+    plt.ylabel("Frequency")
+    plt.savefig(fig_save_path+t_s)
+    plt.clf()
+    # pear = get_pearson(data, alt="two-sided")
+    # line = get_linear_reg(data)
     
-    print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
+    # pears.append((pear.statistic, pear.pvalue))
+    # lines.append(line)
     
+    # print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
+exit()
 #%% plotting corr coeff over time
 pears = np.array(pears)
 y_pos = list(range(len(pears)))
