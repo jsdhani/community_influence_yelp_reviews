@@ -9,6 +9,7 @@ from common.config_paths import (
     YELP_REVIEWS_PATH,
     YELP_USER_PATH, 
     RATINGS_CORR_PATH)
+from common.constants import restaurant_categories
 
 class RatingAnalysis:
     def __init__(self, chunksize=1000, save_path=RATINGS_CORR_PATH):
@@ -22,7 +23,7 @@ class RatingAnalysis:
         self.ratings = None
         
         
-    def prep_data(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))):
+    def prep_data(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), filter=restaurant_categories):
         """
         Prepares the data for analysis by filtering out reviews that are not within the date range
         and removing any reviews that have a rating of 0.
@@ -51,7 +52,8 @@ class RatingAnalysis:
         for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE), 
                                                 desc="Creating bus_revs dictionary"):
             for usr_id, bus_id, rating, date in zip(chunk['user_id'], chunk['business_id'], 
-                                                    chunk['stars'], chunk['date']):
+                                                    chunk['stars'], chunk['date']):                     
+                    
                 # filtering out by date range
                 if date_range[0] <= date <= date_range[1]:
                     if bus_id not in self.bus_revs: # add business_id to dictionary if not already present

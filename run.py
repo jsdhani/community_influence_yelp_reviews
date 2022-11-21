@@ -28,20 +28,22 @@ for x in range(10):
     time_periods.append((start, end))
 
 # %% getting data
-# for t in time_periods:
-#     ra = RatingAnalysis()
-#     ra.prep_data(date_range=(t[0], t[1]))
+for t in time_periods:
+    ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-filtered/")
+    ra.prep_data(date_range=(t[0], t[1]))
     
-#     ratings = ra.get_ratings()
-#     ra.save_ratings()
-#     ra.plot_ratings(title=
-#                     "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
-#                                      t[1].strftime('%Y-%m-%d')))
+    ratings = ra.get_ratings()
+    ra.save_ratings()
+    ra.plot_ratings(title=
+                    "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
+                                     t[1].strftime('%Y-%m-%d')))
 
-    
+exit()    
 # %% correlation analysis
-print("{:25}|{:^10}|{:^10}|{:^10}".format("Period", "coeff", "p-value", "slope"))
-print("-"*45)
+print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
+                                                 "p-value", "slope",
+                                                 "intercept"))
+print("-"*55)
 pears = []
 lines = []
 PATH = lambda x: f"{RATINGS_CORR_PATH}ratings_{x}.pkl"
@@ -56,7 +58,7 @@ for t in time_periods:
     pears.append((pear.statistic, pear.pvalue))
     lines.append(line)
     
-    print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0]))
+    print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
     
 #%%
 pears = np.array(pears)
@@ -78,17 +80,23 @@ for i,t in enumerate(time_periods[:3]):
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)
     data = pickle.load(open(path, 'rb'))
-    
-    
-    # plotting the data
-    # plt.scatter(data[:,0], data[:,1])
-    plt.title("Rating Influence")
+    plt.clf()
     plt.xlabel("User Rating")
     plt.ylabel("Avg. Friend Rating")
-    # plotting the lines from linear regression
     line = lines[i]
     plt.plot(data[:,0], line[0]*data[:,0] + line[1], label=t_s)
 
-plt.legend()
+    plt.scatter(data[:,0], data[:,1])
+    plt.xlabel("User Rating")
+    plt.ylabel("Average Friend Rating")
+    plt.title(t_s)
+    plt.legend()
+    
+    
+    plt.savefig(t_s+'.png')
+    
+    # plotting the data
+    # plt.scatter(data[:,0], data[:,1])
+    # plotting the lines from linear regression
 
 # %%
