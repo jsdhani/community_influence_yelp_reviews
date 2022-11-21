@@ -28,14 +28,14 @@ for x in range(10):
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
     
-PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall-no-rest/"
+PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall/"
 
 # %% getting data
 for t in time_periods:
     ra = RatingAnalysisGeneral(save_path=PKL_FOLDER_PATH)
     ratings = ra.get_business_rating(date_range=(t[0], t[1]), 
-                 filter=restaurant_categories, 
-                 exclude_filter=True)
+                 filter=None, 
+                 exclude_filter=False)
     
     ra.save_ratings()
     # ra.plot_ratings(title=

@@ -25,7 +25,7 @@ class RatingAnalysisGeneral(RatingAnalysis):
         self.bus_ratings = {}
     
     def get_business_rating(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
-                    filter=restaurant_categories, exclude_filter=False):
+                    filter=None, exclude_filter=False):
         """
         Creates dictionary:
         Bus_reviews = {"bus_id": average_rating, ...}
@@ -92,7 +92,7 @@ class RatingAnalysisFriends(RatingAnalysis):
         
         
     def prep_data(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
-                  filter=restaurant_categories, exclude_filter=False):
+                  filter=None, exclude_filter=False):
         """
         Prepares the data for analysis by filtering out reviews that are not within the date range
         and removing any reviews that have a rating of 0.
