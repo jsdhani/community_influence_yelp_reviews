@@ -24,7 +24,8 @@ class RatingAnalysis:
         self.ratings = None
         
         
-    def prep_data(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), filter=restaurant_categories):
+    def prep_data(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
+                  filter=restaurant_categories, exclude_filter=False):
         """
         Prepares the data for analysis by filtering out reviews that are not within the date range
         and removing any reviews that have a rating of 0.
@@ -57,7 +58,12 @@ class RatingAnalysis:
                     if (ctgs == None) or (bus_id in b_cleared): continue # skipping if already checked
                     
                     for c in ctgs.split(','):
-                        if c.strip() in filter:
+                        filt_bool = c.strip() in filter
+                        
+                        # filter data tells us what to exclude if this flag is set:
+                        if exclude_filter: filt_bool = not filt_bool 
+                        
+                        if filt_bool:
                             b_cleared.add(bus_id)
                             break
         

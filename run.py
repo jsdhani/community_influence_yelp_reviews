@@ -8,6 +8,7 @@ from data_analysis.rating_analysis import RatingAnalysis
 from common.config_paths import (
             YELP_REVIEWS_PATH, YELP_USER_PATH, 
             MC_RESULTS_PATH, RESULTS, RATINGS_CORR_PATH)
+from common.constants import restaurant_categories
 from utils.query_raw_yelp import QueryYelp as qy
 from data_analysis.correlation_analysis import get_pearson, get_linear_reg
 from scipy.stats import pearsonr
@@ -29,14 +30,16 @@ for x in range(10):
 
 # %% getting data
 # for t in time_periods:
-#     ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-filtered/")
-#     ra.prep_data(date_range=(t[0], t[1]))
+#     ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-no-rest/")
+#     ra.prep_data(date_range=(t[0], t[1]), 
+#                  filter=restaurant_categories, 
+#                  exclude_filter=True)
     
 #     ratings = ra.get_ratings()
 #     ra.save_ratings()
-#     ra.plot_ratings(title=
-#                     "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
-#                                      t[1].strftime('%Y-%m-%d')))
+    # ra.plot_ratings(title=
+    #                 "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
+    #                                  t[1].strftime('%Y-%m-%d')))
 
 # %% correlation analysis
 print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
@@ -46,7 +49,7 @@ print("-"*55)
 pears = []
 lines = []
 PATH = lambda x: f"{RATINGS_CORR_PATH[:-1]}/ratings_{x}.pkl"
-fig_save_path = None #'media/ratings-filtered/'
+fig_save_path = 'media/ratings-no-rest/'
 for t in time_periods:
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)
@@ -60,7 +63,7 @@ for t in time_periods:
     
     print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
     
-#%%
+#%% plotting corr coeff over time
 pears = np.array(pears)
 y_pos = list(range(len(pears)))
 fig, ax = plt.subplots()
@@ -68,7 +71,7 @@ ax.bar(y_pos, pears[:,0][::-1])
 _=ax.set_xticks(y_pos, labels=[f"{p[1].strftime('%Y')}" for p in time_periods][::-1])
 if fig_save_path: plt.savefig(fig_save_path+'all_corr.png')
 
-#%% ploting linear regression
+#%% ploting linear regression slopes over time
 plt.clf()
 lines = np.array(lines)
 y_pos = list(range(len(lines)))
