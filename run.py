@@ -45,7 +45,8 @@ print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
 print("-"*55)
 pears = []
 lines = []
-PATH = lambda x: f"{RATINGS_CORR_PATH}ratings_{x}.pkl"
+PATH = lambda x: f"{RATINGS_CORR_PATH[:-1]}/ratings_{x}.pkl"
+fig_save_path = None #'media/ratings-filtered/'
 for t in time_periods:
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)
@@ -65,13 +66,16 @@ y_pos = list(range(len(pears)))
 fig, ax = plt.subplots()
 ax.bar(y_pos, pears[:,0][::-1])
 _=ax.set_xticks(y_pos, labels=[f"{p[1].strftime('%Y')}" for p in time_periods][::-1])
+if fig_save_path: plt.savefig(fig_save_path+'all_corr.png')
 
 #%% ploting linear regression
+plt.clf()
 lines = np.array(lines)
 y_pos = list(range(len(lines)))
 fig, ax = plt.subplots()
 ax.bar(y_pos, lines[:,0][::-1])
 _=ax.set_xticks(y_pos, labels=[f"{p[1].strftime('%Y')}" for p in time_periods][::-1])
+if fig_save_path: plt.savefig(fig_save_path+'all_lin.png')
 
 
 # %% plotting just covid data
@@ -92,7 +96,7 @@ for i,t in enumerate(time_periods):
     plt.legend()
     
     
-    plt.savefig(t_s+'.png')
+    if fig_save_path: plt.savefig(fig_save_path+t_s+'.png')
     
     # plotting the data
     # plt.scatter(data[:,0], data[:,1])
