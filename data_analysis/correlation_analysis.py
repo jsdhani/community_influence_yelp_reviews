@@ -10,8 +10,7 @@ from scipy.stats._result_classes import PearsonRResult
 import pandas as pd
 import numpy as np
 
-
-def get_pearson(data_dict:dict, alt:str='less', cutoff=100):
+def get_pearson(data:(dict or np.ndarray), alt:str='less', cutoff=100):
     """
     This function is calculating the Pearson's correlation coefficient which 
     "measures the linear relationship between two datasets".
@@ -26,19 +25,20 @@ def get_pearson(data_dict:dict, alt:str='less', cutoff=100):
         PearsonRResult: Pearson's correlation result (statistic, pvalue), 
             can also be used to specify convidence intervals.
     """
-    srtd = sorted(data_dict.items())
-    
-    x = []
-    y = []
-    for s in srtd:
-        if s[0] > cutoff: continue
-        x.append(s[0])
-        y.append(s[1])
-    
-    
+    if type(data) == dict:
+        srtd = sorted(data.items())
+        x = []
+        y = []
+        for s in srtd:
+            if s[0] > cutoff: continue
+            x.append(s[0])
+            y.append(s[1])
+    elif type(data) == np.ndarray:
+        x, y = data[:,0], data[:,1]
+        
     return pearsonr(x, y, alternative=alt)
 
-def get_linear_reg(data_dict:dict):
+def get_linear_reg(data_dict:(dict or np.ndarray)):
     """
     This function is calculating the linear regression of the data.
     
@@ -48,5 +48,8 @@ def get_linear_reg(data_dict:dict):
     return: 
         tuple: (slope, intercept, r_value, p_value, std_err)
     """
-    x, y = zip(*sorted(data_dict.items()))
+    if type(data_dict) == dict:
+        x, y = zip(*sorted(data_dict.items()))
+    elif type(data_dict) == np.ndarray:
+        x, y = data_dict[:,0], data_dict[:,1]
     return np.polyfit(x, y, 1)
