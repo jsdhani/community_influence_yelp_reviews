@@ -1,4 +1,10 @@
 raw_read_chunk_size = 1000
+FROM = 'from'
+TO = 'to'
+USER_ID = 'user_id'
+CATEGORIES = 'categories'
+FRIENDS = 'friends'
+FRIENDS_COUNT = 'friends_count'
 
 restaurant_categories = [
     "Afghan",

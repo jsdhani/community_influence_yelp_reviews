@@ -8,3 +8,5 @@ YELP_TIP_PATH       = YELP_DATA_PATH_FN("tip") # Tips are shorter than reviews a
 
 RESULTS = "results/"
 MT_RESULTS_PATH = f"{RESULTS}monte_carlo/"
+
+NETWORK_DATA_PATH = "/data/pandemic/viz/"
