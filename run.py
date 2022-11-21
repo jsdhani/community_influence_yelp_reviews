@@ -28,17 +28,16 @@ for x in range(10):
     time_periods.append((start, end))
 
 # %% getting data
-for t in time_periods:
-    ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-filtered/")
-    ra.prep_data(date_range=(t[0], t[1]))
+# for t in time_periods:
+#     ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-filtered/")
+#     ra.prep_data(date_range=(t[0], t[1]))
     
-    ratings = ra.get_ratings()
-    ra.save_ratings()
-    ra.plot_ratings(title=
-                    "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
-                                     t[1].strftime('%Y-%m-%d')))
+#     ratings = ra.get_ratings()
+#     ra.save_ratings()
+#     ra.plot_ratings(title=
+#                     "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
+#                                      t[1].strftime('%Y-%m-%d')))
 
-exit()    
 # %% correlation analysis
 print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
                                                  "p-value", "slope",
@@ -76,7 +75,7 @@ _=ax.set_xticks(y_pos, labels=[f"{p[1].strftime('%Y')}" for p in time_periods][:
 
 
 # %% plotting just covid data
-for i,t in enumerate(time_periods[:3]):
+for i,t in enumerate(time_periods):
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)
     data = pickle.load(open(path, 'rb'))

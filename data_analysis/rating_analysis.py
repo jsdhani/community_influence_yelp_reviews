@@ -8,7 +8,8 @@ from utils.query_raw_yelp import QueryYelp as qy
 from common.config_paths import (
     YELP_REVIEWS_PATH,
     YELP_USER_PATH, 
-    RATINGS_CORR_PATH)
+    RATINGS_CORR_PATH,
+    YELP_BUSINESS_PATH)
 from common.constants import restaurant_categories
 
 class RatingAnalysis:
@@ -46,6 +47,20 @@ class RatingAnalysis:
         self.SAVE_PATH = self.SAVE_PATH_FN(
                 f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
         
+        
+        # looping through businesses to determine if they fall within filter
+        b_cleared = set() # added if they are cleared
+        if filter:
+            for chunk in tqdm(qy.get_json_reader(YELP_BUSINESS_PATH, chunksize=self.CHUNKSIZE),
+                            desc="Applying business filter"):
+                for bus_id, ctgs in zip(chunk['business_id'], chunk['categories']):
+                    if (ctgs == None) or (bus_id in b_cleared): continue # skipping if already checked
+                    
+                    for c in ctgs.split(','):
+                        if c.strip() in filter:
+                            b_cleared.add(bus_id)
+                            break
+        
         # traverse through the reviews to get business_id and user_id for ratings
         # also filter out reviews that are not within the date range
         # this will create a dictionary of {business_id:{user_id:rating, ...}, ...}
@@ -53,6 +68,8 @@ class RatingAnalysis:
                                                 desc="Creating bus_revs dictionary"):
             for usr_id, bus_id, rating, date in zip(chunk['user_id'], chunk['business_id'], 
                                                     chunk['stars'], chunk['date']):                     
+                
+                if filter and (bus_id not in b_cleared): continue # filtering out b_id by catagory if provided
                     
                 # filtering out by date range
                 if date_range[0] <= date <= date_range[1]:
@@ -60,7 +77,7 @@ class RatingAnalysis:
                         self.bus_revs[bus_id] = {}
                     # adding user rating to that business
                     self.bus_revs[bus_id][usr_id] = rating
-                
+                    
         # traverse through the users to get friends
         for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE), 
                                                 desc="Creating network dictionary"):
