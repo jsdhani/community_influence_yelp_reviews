@@ -14,7 +14,8 @@ class GetUsersFromRaw:
             query=users_till_date_query
         )
         result = result.loc[
-            (result['friends'] != '') &
+            (result['friends'] != 'None') &
+            (result['friends'] is not None) &
             (result['average_stars'] > 0)
         ].reset_index(drop=True)
 
