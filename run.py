@@ -4,7 +4,7 @@ I am just using this as a test bed for now, please excuse the mess...
 
 # %%
 from data_analysis.monte_carlo import ReviewProb
-from data_analysis.rating_analysis import RatingAnalysis
+from data_analysis.rating_analysis import RatingAnalysisFriends, RatingAnalysisGeneral
 from common.config_paths import (
             YELP_REVIEWS_PATH, YELP_USER_PATH, 
             MC_RESULTS_PATH, RESULTS, RATINGS_CORR_PATH)
@@ -27,16 +27,17 @@ for x in range(10):
     start = covid_range[0] - (x * len_covid)
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
+    
+PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall-rest/"
 
 # %% getting data
-# for t in time_periods:
-#     ra = RatingAnalysis(save_path=f"{RESULTS}/ratings-no-rest/")
-#     ra.prep_data(date_range=(t[0], t[1]), 
-#                  filter=restaurant_categories, 
-#                  exclude_filter=True)
+for t in time_periods:
+    ra = RatingAnalysisGeneral(save_path=PKL_FOLDER_PATH)
+    ratings = ra.get_business_rating(date_range=(t[0], t[1]), 
+                 filter=restaurant_categories, 
+                 exclude_filter=False)
     
-#     ratings = ra.get_ratings()
-#     ra.save_ratings()
+    ra.save_ratings()
     # ra.plot_ratings(title=
     #                 "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
     #                                  t[1].strftime('%Y-%m-%d')))
@@ -48,8 +49,9 @@ print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
 print("-"*55)
 pears = []
 lines = []
-PATH = lambda x: f"{RATINGS_CORR_PATH[:-1]}/ratings_{x}.pkl"
-fig_save_path = 'media/ratings-no-rest/'
+PATH = lambda x: f"{PKL_FOLDER_PATH}/ratings_{x}.pkl"
+fig_save_path = 'media/'+ PKL_FOLDER_PATH.split('/')[-1]+ '/'
+input(fig_save_path+ "\n"+PATH('TEST'))
 for t in time_periods:
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
     path = PATH(t_s)

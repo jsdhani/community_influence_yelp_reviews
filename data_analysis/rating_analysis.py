@@ -19,6 +19,73 @@ class RatingAnalysis:
         self.SAVE_PATH_FN = lambda x: f"{save_path}ratings_{x}.pkl"
         self.SAVE_PATH = None
         
+class RatingAnalysisGeneral(RatingAnalysis):
+    def __init__(self, chunksize=1000, save_path=RATINGS_CORR_PATH):
+        super().__init__(chunksize, save_path)    
+        self.bus_ratings = {}
+    
+    def get_business_rating(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
+                    filter=restaurant_categories, exclude_filter=False):
+        """
+        Creates dictionary:
+        Bus_reviews = {"bus_id": average_rating, ...}
+        
+        """
+        self.SAVE_PATH = self.SAVE_PATH_FN(
+                f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
+        
+        
+        # looping through businesses to determine if they fall within filter
+        b_cleared = set() # added if they are cleared
+        if filter:
+            for chunk in tqdm(qy.get_json_reader(YELP_BUSINESS_PATH, chunksize=self.CHUNKSIZE),
+                            desc="Applying business filter"):
+                for bus_id, ctgs in zip(chunk['business_id'], chunk['categories']):
+                    if (ctgs == None) or (bus_id in b_cleared): continue # skipping if already checked
+                    
+                    for c in ctgs.split(','):
+                        filt_bool = c.strip() in filter
+                        
+                        # filter data tells us what to exclude if this flag is set:
+                        if exclude_filter: filt_bool = not filt_bool 
+                        
+                        if filt_bool:
+                            b_cleared.add(bus_id)
+                            break
+        
+        # traverse through the reviews to get:
+        #       ratings_num = {b_id: # of ratings}
+        #       ratings_totV = {b_id: ratingtot}
+        rating_num = {}
+        rating_totV = {}
+        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE), 
+                                                desc="Getting number of ratings and total value per business"):
+            for bus_id, rating, date in zip(chunk['business_id'], chunk['stars'], chunk['date']):
+                
+                if filter and (bus_id not in b_cleared): continue # filtering out b_id by catagory if provided
+                    
+                # filtering out by date range
+                if date_range[0] <= date <= date_range[1]:
+                    if bus_id not in rating_num: # add business_id to dictionary if not already present
+                        rating_num[bus_id] = 1
+                        rating_totV[bus_id] = int(rating)
+                    else:
+                        rating_num[bus_id] += 1
+                        rating_totV[bus_id] += int(rating)
+                    
+        # now we do ratings_totV/ratings_num to get the average rating for each business
+        self.bus_ratings = {b_id: rating_totV[b_id]/rating_num[b_id] for b_id in tqdm(rating_num, desc="Calculating averages")}
+        
+        return self.bus_ratings
+    
+    def save_ratings(self):
+        with open(self.SAVE_PATH, 'wb') as f:
+            pickle.dump(self.bus_ratings, f)
+
+class RatingAnalysisFriends(RatingAnalysis):
+    def __init__(self, chunksize=1000, save_path=RATINGS_CORR_PATH):
+        super().__init__(chunksize, save_path)
+        
         self.bus_revs = {} # {business_id:{user_id:rating, ...}, ...}
         self.network = {} # {user_id:{friend_id, ...}, ...}
         self.ratings = None
