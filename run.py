@@ -28,19 +28,27 @@ for x in range(10):
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
     
-PKL_FOLDER_PATH = f"{RESULTS}/ratings-overall/"
+PKL_FOLDER_PATH = f"{RESULTS}/monte_carlo_prob0/"
 
-# %% getting data
+
+# %% monte carlo
 for t in time_periods:
-    ra = RatingAnalysisGeneral(save_path=PKL_FOLDER_PATH)
-    ratings = ra.get_business_rating(date_range=(t[0], t[1]), 
-                 filter=None, 
-                 exclude_filter=False)
+    rp = ReviewProb(save_path=PKL_FOLDER_PATH)
+    rp.prep_data_range(date_range=(t[0], t[1]))
+    rp.get_probs(plot=True, save=True)
     
-    ra.save_ratings()
-    # ra.plot_ratings(title=
-    #                 "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
-    #                       t[1].strftime('%Y-%m-%d')))
+
+# # %% getting data
+# for t in time_periods:
+#     ra = RatingAnalysisGeneral(save_path=PKL_FOLDER_PATH)
+#     ratings = ra.get_business_rating(date_range=(t[0], t[1]), 
+#                  filter=None, 
+#                  exclude_filter=False)
+    
+#     ra.save_ratings()
+#     # ra.plot_ratings(title=
+#     #                 "{} - {}".format(t[0].strftime('%Y-%m-%d'), 
+#     #                       t[1].strftime('%Y-%m-%d')))
     
 
 # %% correlation analysis

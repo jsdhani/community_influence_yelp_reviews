@@ -37,9 +37,10 @@ class ReviewProb:
         self.MAX_USERS = max_users
         self.CHUNKSIZE = chunksize
         
-        self.prob = {}
+        self.prob_0 = {}
+        self.prob_1 = {}
         self.users = {}
-        self.SAVE_PATH_FN = lambda x: f"{save_path}ReviewProb_{self.MAX_USERS}-{x}.pkl" # x is a placeholder for the date range
+        self.SAVE_PATH_FN = lambda x: f"{save_path}{x}.pkl" # x is a placeholder for the date range
         self.SAVE_PATH = self.SAVE_PATH_FN("all") # default is entire date range
     
     def prep_data_range(self, date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))):
@@ -108,13 +109,22 @@ class ReviewProb:
                 # USERS:      {ID: (friends_ID)}
                 # BUSINESSES: {ID: (Usr_ID)}
         
-        ####### METHOD 2: iterating through users first ####### Exclude users with no friends or no reviews
+        ####### METHOD 2.1: iterating through users first ####### 
+            # Exclude users with no friends or no reviews,
+            # This only gets P(1| i)
                 # USERS:      {ID: {"network": (friends_ID), 
                 #                 "businesses": {business_ID: (review_ID)}
                 #                 }
                 #             }
+        ####### METHOD 2.0:
+            # this aims to get P(0|i) instead by altering 2.1
+                USERS: {ID: {"network": (friends_ID),
+                                "businesses": {business_ID: (review_ID)}
+                            }
+                        }
+                
         
-        This method uses method 2.
+        This method uses method 2.1
         """
         # Iterate through the users and create dictionary of user ids and their network
         print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
@@ -150,20 +160,120 @@ class ReviewProb:
                 
         return self.users
     
-    # def get_prob_f_review(self):
-    #     # USERS:      {ID: {"network": (friends_ID), 
-    #     #                 "businesses": {business_ID: (review_ID)}
-    #     #                 }
-    #     #             }
-    #     # gets the probability of a i friend(s) reviewing a business
-    #     prob_counts = {}
-    #     for usr_id in tqdm(self.users):
-    #         usr = self.users[usr_id]
-    #         for f in usr["network"]: # looping through their friends
-    #             for b in usr["businesses"]: # looping through reviews made by friends
+    def get_probs(self, plot=True, save=True, weighted=False, normalize=True):
+        """
+        To get prob(0|i)s we:
+            1. iterate USERS:
+                keep track of {b_id: i} # b_id = business that this user did not review but i friends did
+                i) iterate friends
+                    a - count # of businesses they review that the user doesn't.
+                        Add to local var mentioned above
+                ii) Get values and add them to prob counts as {i: #evnts}
+            2. normalize counts
+            
+        To get prob(1|i)s we adjust above 1.i and 1.ii to:
+            keep track of b_reviewed = {b_id: i} # business that this user did review and i friends did
+            i) iterate friends
+                a - count # of businesses they review that the user also does.
+
+        Args:
+            plot (bool, optional): _description_. Defaults to True.
+            save (bool, optional): _description_. Defaults to True.
+            weighted (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        # To get the probabilities we preform the following monte carlo simulation:
+        prob_counts_0 = {} # user has not reviewed business but i friends have
+        prob_counts_1 = {} # user has reviewed business and i friends have
+        for usr_id in tqdm(self.users, desc="Getting prob(0|i) and prob(1|i)"):
+            usr = self.users[usr_id]
+            num_f = len(usr["network"])
+            b_not_reviewed = {} # business that this user did not review but i friends did (i=value and b_id=key)
+            b_reviewed = {}
+            # looping through friends of user
+            for friend_id in usr["network"]:
+                friend = self.users[friend_id]
+                # looping through businesses reviewed by friend
+                for b in friend["businesses"]:
+                    # P(1|i) - if user has also reviewed this business
+                    if b in usr["businesses"]: # constant time lookup
+                        if b in b_reviewed:
+                            b_reviewed[b] += 1
+                        else:
+                            b_reviewed[b] = 1
+                    # P(0|i) - user has NOT reviewed this business
+                    else: 
+                        if b in b_not_reviewed:
+                            b_not_reviewed[b] += 1
+                        else:
+                            b_not_reviewed[b] = 1
+            
+            # updating prob_counts based on values from b_not_reviewed and b_reviewed:
+            for b in b_not_reviewed:
+                i = b_not_reviewed[b]
+                if i in prob_counts_0:
+                    prob_counts_0[i] += num_f if weighted else 1
+                else:
+                    prob_counts_0[i] = num_f if weighted else 1
+            for b in b_reviewed:
+                i = b_reviewed[b]
+                if i in prob_counts_1:
+                    prob_counts_1[i] += num_f if weighted else 1
+                else:
+                    prob_counts_1[i] = num_f if weighted else 1
         
+        # normalize to get probabilities
+        if normalize:
+            prob_counts_0 = {k: v/sum(prob_counts_0.values()) for k,v in prob_counts_0.items()}
+            prob_counts_1 = {k: v/sum(prob_counts_1.values()) for k,v in prob_counts_1.items()}
         
-    def get_prob(self, plot=True, save=True, weighted=False):        
+        self.prob_0 = prob_counts_0
+        self.prob_1 = prob_counts_1
+        
+        if save:
+            f_name = '/'.join(self.SAVE_PATH.split("/")[:-1]) +'/W-' \
+                            + self.SAVE_PATH.split("/")[-1] if weighted else self.SAVE_PATH
+            
+            f_name_0 = f_name.split(".")[0] + "_prob_0.pkl"
+            f_name_1 = f_name.split(".")[0] + "_prob_1.pkl"
+            # Saving the probabilities as a dict pkl with the columns: num_friends, num_instances
+            with open(f_name_0, 'wb') as f:
+                pickle.dump(self.prob_0, f)
+                
+            with open(f_name_1, 'wb') as f:
+                pickle.dump(self.prob_1, f)
+                
+        if plot:
+            prob_sorted = sorted(self.prob_0.items())
+            plt.scatter([x[0] for x in prob_sorted],
+                        [y[1] for y in prob_sorted])
+            plt.xlabel("friend counts")
+            plt.ylabel("Frequency")
+            plt.title("Prob(0|i) - User has not reviewed business but i friends have")
+            plt.show()
+            
+            prob_sorted = sorted(self.prob_1.items())
+            plt.scatter([x[0] for x in prob_sorted],
+                        [y[1] for y in prob_sorted])
+            plt.xlabel("friend counts")
+            plt.ylabel("Frequency")
+            plt.title("Prob(0|i) - User has not reviewed business but i friends have")
+            plt.show()
+            
+            
+        return self.prob_1
+    
+    def get_prob_1(self, plot=True, save=True, weighted=False):        
+        """
+        To get prob(1|i)s we:
+            1. iterate through USERS
+                i) iterate through their reviews
+                    a - Count i friends that have also reviewed that same business
+                ii) add as {i: # of events} where # events is how often this exact instance occurs
+            2. normalize counts
+        """
         # To get the probabilities we preform the following monte carlo simulation:
         prob_counts = {} # keeps track of instances of (User writes a review | i friend(s) wrote a review) where i is the key
         for usr_id in tqdm(self.users):
@@ -187,24 +297,24 @@ class ReviewProb:
 
         # normalize to get probabilities
         total = sum(prob_counts.values())
-        self.prob = {k: v/total for k, v in prob_counts.items()}
+        self.prob_1 = {k: v/total for k, v in prob_counts.items()}
         
         if save:
             f_name = '/'.join(self.SAVE_PATH.split("/")[:-1]) +'/W-' \
                             + self.SAVE_PATH.split("/")[-1] if weighted else self.SAVE_PATH
             # Saving the probabilities as a dict pkl with the columns: num_friends, num_instances
             with open(f_name, 'wb') as f:
-                pickle.dump(self.prob, f)
+                pickle.dump(self.prob_1, f)
                 
         if plot:
-            prob_sorted = sorted(self.prob.items())
+            prob_sorted = sorted(self.prob_1.items())
             plt.scatter([x[0] for x in prob_sorted],
                         [y[1] for y in prob_sorted])
             plt.xlabel("friend counts")
             plt.ylabel("Frequency")
             plt.show()
             
-        return self.prob
+        return self.prob_1
     
     
     
@@ -212,9 +322,9 @@ if __name__ == "__main__":
     # prob before covid
     rp = ReviewProb()
     rp.prep_data_range(date_range=(pd.Timestamp('2017-04-01'), pd.Timestamp('2018-12-01')))
-    rp.get_prob(plot=False, save=True, weighted=True)
+    rp.get_prob_1(plot=False, save=True, weighted=True)
     
     # prob after covid
     rp = ReviewProb()
     rp.prep_data_range(date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')))
-    rp.get_prob(plot=False, save=True)
+    rp.get_prob_1(plot=False, save=True)
