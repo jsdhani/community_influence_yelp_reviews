@@ -36,7 +36,6 @@ for t in time_periods:
     rp = ReviewProb(save_path=PKL_FOLDER_PATH)
     rp.prep_data_range(date_range=(t[0], t[1]))
     rp.get_probs(plot=False, save=True)
-    
 
 # # %% getting data
 # for t in time_periods:
@@ -70,10 +69,18 @@ for t in time_periods:
     
     data = data_0
     
-    pear = get_pearson(data, alt="two-sided")
-    line = get_linear_reg(data)
+    pear_0 = get_pearson(data_0, alt="two-sided")
+    line_0 = get_linear_reg(data_0)
     
-    pears.append((pear.statistic, pear.pvalue))
+    pear_1 = get_pearson(data_1, alt="two-sided")
+    line_1 = get_linear_reg(data_1)
+    
+    pear = (pear_1[0],#-pear_1[0], 
+            pear_1[1])#-pear_1[1])
+    line = (line_1[0],#-line_1[0], 
+            line_1[1])#-line_1[1])
+    
+    pears.append(pear)
     lines.append(line)
     
     print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))

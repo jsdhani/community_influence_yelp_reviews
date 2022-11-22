@@ -265,7 +265,7 @@ class ReviewProb:
             plt.show()
             
             
-        return self.prob_1
+        return self.prob_0, self.prob_1
     
     def get_prob_1(self, plot=True, save=True, weighted=False):        
         """
