@@ -58,30 +58,25 @@ PATH = lambda x: f"{PKL_FOLDER_PATH}/{x}.pkl"
 
 fig_save_path = 'media/'+ PKL_FOLDER_PATH.split('/')[-2]+ '/'
 
-# print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
-#                                                  "p-value", "slope",
-#                                                  "intercept"))
-# print("-"*55)
+print("{:25}|{:^10}|{:^10}|{:^10}|{:^10}".format("Period", "coeff",
+                                                 "p-value", "slope",
+                                                 "intercept"))
+print("-"*55)
 for t in time_periods:
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
-    path = PATH(t_s)
-    data = pickle.load(open(path, 'rb'))
+    path_prob = lambda x: PATH(f"{t_s}_prob_{x}")
+    data_0 = pickle.load(open(path_prob(0), 'rb'))
+    data_1 = pickle.load(open(path_prob(1), 'rb'))
     
-    # Get distribution of the scores
-    hist = np.histogram(list(data.values()), bins=10)
+    data = data_0
     
-    plt.stairs(hist[0], hist[1], fill=True)
-    plt.xlabel("Business rating")
-    plt.ylabel("Frequency")
-    plt.savefig(fig_save_path+t_s)
-    plt.clf()
-    # pear = get_pearson(data, alt="two-sided")
-    # line = get_linear_reg(data)
+    pear = get_pearson(data, alt="two-sided")
+    line = get_linear_reg(data)
     
-    # pears.append((pear.statistic, pear.pvalue))
-    # lines.append(line)
+    pears.append((pear.statistic, pear.pvalue))
+    lines.append(line)
     
-    # print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
+    print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
 
 #%% plotting corr coeff over time
 pears = np.array(pears)
@@ -101,11 +96,13 @@ _=ax.set_xticks(y_pos, labels=[f"{p[1].strftime('%Y')}" for p in time_periods][:
 if fig_save_path: plt.savefig(fig_save_path+'all_lin.png')
 
 
-# %% plotting just covid data
+# %% plotting with linear regression
 for i,t in enumerate(time_periods):
     t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
-    path = PATH(t_s)
-    data = pickle.load(open(path, 'rb'))
+    path_prob = lambda x: PATH(f"{t_s}_prob_{x}")
+    data = pickle.load(open(path_prob(0), 'rb'))
+    data = np.array([[x,y] for x,y in data.items()])
+    
     plt.clf()
     plt.xlabel("User Rating")
     plt.ylabel("Avg. Friend Rating")
@@ -120,9 +117,5 @@ for i,t in enumerate(time_periods):
     
     
     if fig_save_path: plt.savefig(fig_save_path+t_s+'.png')
-    
-    # plotting the data
-    # plt.scatter(data[:,0], data[:,1])
-    # plotting the lines from linear regression
 
 # %%
