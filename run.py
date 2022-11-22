@@ -35,7 +35,7 @@ PKL_FOLDER_PATH = f"{RESULTS}/monte_carlo_prob0/"
 for t in time_periods:
     rp = ReviewProb(save_path=PKL_FOLDER_PATH)
     rp.prep_data_range(date_range=(t[0], t[1]))
-    rp.get_probs(plot=True, save=True)
+    rp.get_probs(plot=False, save=True)
     
 
 # # %% getting data
@@ -54,7 +54,7 @@ for t in time_periods:
 # %% correlation analysis
 pears = []
 lines = []
-PATH = lambda x: f"{PKL_FOLDER_PATH}/ratings_{x}.pkl"
+PATH = lambda x: f"{PKL_FOLDER_PATH}/{x}.pkl"
 
 fig_save_path = 'media/'+ PKL_FOLDER_PATH.split('/')[-2]+ '/'
 
@@ -82,7 +82,7 @@ for t in time_periods:
     # lines.append(line)
     
     # print("{:25}|{:^10.3}|{:^10.3}|{:^10.3}|{:^10.3}".format(t_s, pear[0], pear[1], line[0], line[1]))
-exit()
+
 #%% plotting corr coeff over time
 pears = np.array(pears)
 y_pos = list(range(len(pears)))

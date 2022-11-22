@@ -194,6 +194,8 @@ class ReviewProb:
             b_reviewed = {}
             # looping through friends of user
             for friend_id in usr["network"]:
+                if friend_id not in self.users: # friend might have been filtered out (e.g.: no reviews during time period)
+                    continue
                 friend = self.users[friend_id]
                 # looping through businesses reviewed by friend
                 for b in friend["businesses"]:
@@ -259,7 +261,7 @@ class ReviewProb:
                         [y[1] for y in prob_sorted])
             plt.xlabel("friend counts")
             plt.ylabel("Frequency")
-            plt.title("Prob(0|i) - User has not reviewed business but i friends have")
+            plt.title("Prob(1|i) - User has reviewed business and i friends have")
             plt.show()
             
             
