@@ -18,72 +18,23 @@ import pandas as pd
 import numpy as np
 import pickle
 import math
+from utils.plotting import (get_pkl_path, get_mc_pkl_path, 
+                            bin_data, plot_bins, plot_mc_prob, 
+                            plot_over_time)
 
 
 # %%
 covid_range = (pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01'))
 len_covid = covid_range[1] - covid_range[0] # 609 days
 time_periods = []
-for x in range(10):
+for x in range(4):
     start = covid_range[0] - (x * len_covid)
     end = covid_range[1] - (x * len_covid)
     time_periods.append((start, end))
     
 PKL_FOLDER_PATH = f"{RESULTS}/monte_carlo_prob0/"
 
-#%%
-def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1]):
-    """
-    This function is binning the data into bins number of bins.
-    """
-    binned_d = {k: 0 for k in bins}
-    for i in range(len(bins)):
-        l = bins[i]
-        r = bins[i+1] if i < len(bins)-1 else math.inf # last bin is open ended
-        for k,v in data.items():
-            if ignore_exact and k in ignore_exact: continue
-            if l <= k and k <= r:
-                binned_d[l] += v
-    return binned_d
-
-def plot_bins(binned_d0, binned_d1=None):
-    if binned_d1 == None:
-        data = np.array([[x,y] for x,y in binned_d0.items()])
-        plt.bar(data[:,0], data[:,1], width=5, align='edge')
-    else: # grouped bar chart
-        data_0 = np.array([[x,y] for x,y in binned_d0.items()])
-        data_1 = np.array([[x,y] for x,y in binned_d1.items()])
-        
-        h0 = plt.bar(data_0[:,0], data_0[:,1], width=2.5, align='edge')
-        h1 = plt.bar(data_1[:,0]+2.5, data_1[:,1], width=2.5, align='edge')
-        
-        plt.legend((h0[0], h1[0]), ('P(0|i)', 'P(1|i)'))
-
-# %%
-MC_PATH_PKL = "results/monte_carlo_prob0/"
-MC_PATH_MEDIA = "media/monte_carlo_prob01_binned/"
-for t in time_periods[0:5]:
-    t_s = f"{t[0].strftime('%Y-%m-%d')}_{t[1].strftime('%Y-%m-%d')}"
-    curr_path = lambda x: f"{MC_PATH_PKL}{t_s}_prob_{x}.pkl"
-    
-    data_0 = pickle.load(open(curr_path(0), "rb"))
-    data_1 = pickle.load(open(curr_path(1), "rb"))
-    
-    bins = [x for x in range(0,51,5)]
-    ignore_exact = [0]
-    bd_0 = bin_data(data_0, bins, ignore_exact)
-    bd_1 = bin_data(data_1, bins, ignore_exact)
-    plot_bins(bd_1, bd_0)
-    plt.xlabel("Number of i friends who reviewed same business")
-    plt.ylabel("Monte Carlo probability")
-    plt.title(f"{t_s}: Ignoring i={ignore_exact}")
-    i_str = "".join([str(x) for x in ignore_exact])
-    plt.savefig(f"{MC_PATH_MEDIA}{t_s}_prob_01_i{i_str}.png")
-    plt.show()
-    plt.clf()
-    
-    
-    
+#%% 
 
 # %% monte carlo
 # for t in time_periods:
