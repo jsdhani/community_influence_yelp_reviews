@@ -55,6 +55,8 @@ class ReviewProb:
         self.SAVE_PATH = self.SAVE_PATH_FN(
                 f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
         
+        self.all_businesses = set() # used to get P(0|0) later
+        
         # we start with the reviews to filter specific time periods
         for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE),
                           desc="Creating user dictionary"):
@@ -64,6 +66,9 @@ class ReviewProb:
                 
                 # ensuring that we only get reviews from specific time range (YYYY-MM-DD)
                 if date >= date_range[0] and date <= date_range[1]:
+                    # adding to all businesses reviewed in the time period
+                    if bus_id not in self.all_businesses: self.all_businesses.add(bus_id)
+                    
                     if usr_id not in self.users:
                         self.users[usr_id] = {"businesses": {bus_id: [rev_id]}} # network is added later
                     else:
@@ -205,16 +210,17 @@ class ReviewProb:
                         else:
                             b_not_reviewed[b] = 1
             
-            # remaining businesses that this user reviewed => P(1|0)
-            for b in usr["businesses"]:
-                if b not in b_reviewed:
-                    b_reviewed[b] = 0 # zero friends reviewed this business
-                    
-            # all other businesses that this user did not review => P(0|0)
-            # for b in tqdm(self.businesses, desc="Getting prob(0|0)"):
-            #     if b not in b_not_reviewed:
-            #         b_not_reviewed[b] = 0 # zero friends reviewed this business
+            # all other businesses that this user did not review or friends didnt review=> P(0|0)
+            if 0 not in prob_counts_0: prob_counts_0[0] = 0 # initialize if not already
+            prob_counts_0[0] += len(self.all_businesses) - (
+                                len(b_not_reviewed) +   # User didnt review but friends did
+                                len(b_reviewed))        # User reviewed and friends did (disjoint from b_not_reviewed)
+                                                        # = total businesses reviewed by Users and friends
             
+            # remaining businesses that this user reviewed but friends didnt => P(1|0)
+            for b in usr["businesses"]:
+                if b not in b_reviewed: b_reviewed[b] = 0
+                                
             # updating prob_counts based on values from b_not_reviewed and b_reviewed:
             for b in b_not_reviewed:
                 i = b_not_reviewed[b]
@@ -228,6 +234,7 @@ class ReviewProb:
                     prob_counts_1[i] += num_f if weighted else 1
                 else:
                     prob_counts_1[i] = num_f if weighted else 1
+            
         
         # normalize to get probabilities
         if normalize:
