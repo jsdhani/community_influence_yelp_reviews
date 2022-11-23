@@ -162,4 +162,32 @@ def plot_mc_prob_compare(time_periods, ignore_exact=[0,1],
     plt.clf()
         
     return pears, lines
-   
+
+
+def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None):
+    bins = np.histogram(values, bins=10, density=True)
+    plt.stairs(bins[0], bins[1], fill=True)
+    plt.yticks(ticks=[])
+    plt.xlabel("Star Rating")
+    plt.title(f'Average {section} Rating Distribution \n{t_s}')
+    
+    if save_path:
+        plt.savefig(f'{save_path}{t_s}.png')
+
+# def plot_rating_dist(time_periods, 
+#                      path=f'{RESULTS}ratings-overall-no-rest/ratings_', 
+#                      save_path='media/final_ptt_plots/ratings/distributions/no-rest/'):
+#     for i, t in enumerate(time_periods):
+#         curr_path, t_s = get_pkl_path(path, t)
+#         data = pickle.load(open(curr_path(""), 'rb'))
+        
+#         # data is as {b_id: avg rating}
+#         bins = np.histogram(list(data.values()), bins=10, density=True)
+#         plt.stairs(bins[0], bins[1], fill=True)
+#         plt.xlabel("Star Rating")
+#         plt.yticks(ticks=[])
+#         plt.title(f'Average Non-Restaraunt Ratings Distribution \n{t_s}')
+        
+#         # plt.show()
+#         plt.savefig(f'{save_path}{t_s}.png')
+#         plt.clf()
