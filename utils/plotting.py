@@ -38,7 +38,7 @@ def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1]):
         r = bins[i+1] if i < len(bins)-1 else math.inf # last bin is open ended
         for k,v in data.items():
             if ignore_exact and k in ignore_exact: continue
-            if l <= k and k <= r:
+            if l <= k and k < r:
                 binned_d[l] += v
     return binned_d
 
@@ -201,18 +201,22 @@ def get_time_periods(covid_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021
 if __name__ == "__main__":
     time_periods = get_time_periods()
     
+    
     # Plotting rating distributions for businesses
-    path=f'{RESULTS}ratings-overall/ratings_'
-    save_path='media/final_ptt_plots/ratings/distributions/all/'
+    path=f'{RESULTS}ratings-overall-no-rest/ratings_'
+    save_path='media/final_ptt_plots/ratings/distributions/no-rest/'
 
     for i, t in enumerate(time_periods):
         curr_path, t_s = get_pkl_path(path, t)
         data = pickle.load(open(curr_path(""), 'rb'))
-    
+
         plot_rating_dist(list(data.values()), t_s, 
-                        section='Business', save_path=save_path)
-        plt.show()
-        plt.clf()
+                        section='Restaurant', alpha=.5)#, save_path=save_path)
+        # plt.show()
+        # plt.clf()
+    plt.title(f"Rating Distribution for Non-Restaurants")
+    plt.legend(loc='upper left')
+    plt.savefig(f'{save_path}overlay.png')
         
     # plotting rating corr:
     PKL_FOLDER_PATH = f"{RESULTS}ratings-no-rest/ratings_"
