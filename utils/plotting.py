@@ -28,7 +28,7 @@ def get_mc_pkl_path(dir_path, time_period):
     
     return data_0, data_1
     
-def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1]):
+def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1], normalize=False):
     """
     This function is binning the data into bins number of bins.
     """
@@ -40,6 +40,10 @@ def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1]):
             if ignore_exact and k in ignore_exact: continue
             if l <= k and k < r:
                 binned_d[l] += v
+                
+    # normalize
+    if normalize:
+        binned_d = {k: v/sum(binned_d.values()) for k,v in binned_d.items()}
     return binned_d
 
 def plot_bins(binned_d0, binned_d1=None, w=2.5):
@@ -56,8 +60,10 @@ def plot_bins(binned_d0, binned_d1=None, w=2.5):
         data_0 = np.array([[x,y] for x,y in binned_d0.items()])
         data_1 = np.array([[x,y] for x,y in binned_d1.items()])
         
-        h0 = plt.bar(data_0[:,0], data_0[:,1], width=w, align='edge')
-        h1 = plt.bar(data_1[:,0]+w, data_1[:,1], width=w, align='edge')
+        h0 = plt.bar(data_0[:,0], data_0[:,1], width=-w, 
+                        align='edge', tick_label=data_0[:,0])
+        h1 = plt.bar(data_1[:,0], data_1[:,1], width=w, 
+                        align='edge')
         
         plt.legend((h0[0], h1[0]), ('P(0|i)', 'P(1|i)'))
 
@@ -86,7 +92,7 @@ def plot_mc_prob(time_periods):
         plt.show()
         plt.clf()
 
-def plot_over_time(data, time_periods, idx=0): # idx picks the elemnt of the tuple in data
+def plot_over_time(data, time_periods,ax=None,idx=0, labels=('P(0|i=)', 'P(1|i)')): # idx picks the elemnt of the tuple in data
     """_summary_
 
     Args:
@@ -95,16 +101,16 @@ def plot_over_time(data, time_periods, idx=0): # idx picks the elemnt of the tup
                 * rows are for P(0|i) and P(1|i)
         time_periods (_type_): _description_
     """
-    idx = 0
     w = 0.4
     data = np.array(data)
     y_pos = list(range(len(data)))
     d_0 = data[:, 0, idx]
     d_1 = data[:, 1, idx]
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
     h0 = ax.bar([y-w/2 for y in y_pos], d_0[::-1], width=w, align='center')
     h1 = ax.bar([y+w/2 for y in y_pos], d_1[::-1], width=w, align='center')
-    plt.legend((h0[0], h1[0]), ('P(0|i)', 'P(1|i)'), loc='upper left')
+    plt.legend((h0[0], h1[0]), labels, loc='upper left')
     _=ax.set_xticks(y_pos,
         labels=[f"{p[0].strftime('%Y')}-{p[1].strftime('%Y')}" for p in time_periods][::-1])
 
