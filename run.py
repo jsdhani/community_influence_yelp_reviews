@@ -41,9 +41,10 @@ for t in time_periods:
 MC_PATH_PKL = "results/monte_carlo_prob0/"
 MC_PATH_MEDIA = "media/monte_carlo_prob01_binned/"
 bins = [x for x in range(0,51,5)]
-ignore_exact = [0,1]
+bins = [0,1]
+ignore_exact = []
 for t in time_periods:
-    path, t_s = get_pkl_path(MC_PATH_PKL, t)
+    path, t_s = get_pkl_path(PATH_PKL, t)
     print(path("_prob_X"))
     
     data_0 = pickle.load(open(path("_prob_0"), "rb"))
@@ -52,11 +53,11 @@ for t in time_periods:
     bd_0 = bin_data(data_0, bins, ignore_exact)
     bd_1 = bin_data(data_1, bins, ignore_exact)
     
-    plot_bins(bd_1, bd_0)
+    plot_bins(bd_1, bd_0, w=.5)
     
     plt.xlabel("Number of i friends who reviewed same business")
-    plt.ylabel("Monte Carlo probability")
-    plt.ylim(0,1)
+    plt.ylabel("Monte Carlo counts")
+    # plt.ylim(0,1)
     plt.title(f"{t_s}: Ignoring i={ignore_exact}")
     
     i_str = "".join([str(x) for x in ignore_exact])

@@ -56,8 +56,8 @@ class ReviewProb:
                 f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
         
         # we start with the reviews to filter specific time periods
-        print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
-        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE)):
+        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE),
+                          desc="Creating user dictionary"):
             for usr_id, bus_id, rev_id, date in zip(
                             chunk["user_id"], chunk["business_id"], 
                             chunk["review_id"], chunk["date"]):     
@@ -80,8 +80,8 @@ class ReviewProb:
             break
 
         # now we iterate through the users and to populate their network
-        print("Populating user dictionary with reviews...\n\t(<2mins for all reviews on intel i9-12900k)")
-        for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE)):
+        for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE), 
+                          desc="Populating user dictionary with reviews"):
             for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
                 # again we are ignoring users with no reviews and users with no friends in our time period
                 if usr_id in self.users and f_ids != "None":
@@ -93,11 +93,11 @@ class ReviewProb:
                         del self.users[usr_id] # removing users with no friends
                         
         # final check to remove users with no reviews or no friends
-        print("Finished prepping data! Performing final check...")
         no_network = [k for k,v in self.users.items() if "network" not in v]
-        for k in no_network:
+        for k in tqdm(no_network, desc="Final Check: Removing users with no friends"):
             del self.users[k]
             
+        print("Finished prepping data!")
         return self.users
     
     def prep_data(self):
@@ -111,20 +111,12 @@ class ReviewProb:
         
         ####### METHOD 2.1: iterating through users first ####### 
             # Exclude users with no friends or no reviews,
-            # This only gets P(1| i)
                 # USERS:      {ID: {"network": (friends_ID), 
                 #                 "businesses": {business_ID: (review_ID)}
                 #                 }
-                #             }
-        ####### METHOD 2.0:
-            # this aims to get P(0|i) instead by altering 2.1
-                USERS: {ID: {"network": (friends_ID),
-                                "businesses": {business_ID: (review_ID)}
-                            }
-                        }
-                
+                #             }               
         
-        This method uses method 2.1
+        This method uses method 2
         """
         # Iterate through the users and create dictionary of user ids and their network
         print("Creating user dictionary...\n\t(<2mins for all users on intel i9-12900k)")
@@ -192,6 +184,7 @@ class ReviewProb:
             num_f = len(usr["network"])
             b_not_reviewed = {} # business that this user did not review but i friends did (i=value and b_id=key)
             b_reviewed = {}
+            
             # looping through friends of user
             for friend_id in usr["network"]:
                 if friend_id not in self.users: # friend might have been filtered out (e.g.: no reviews during time period)
@@ -211,6 +204,16 @@ class ReviewProb:
                             b_not_reviewed[b] += 1
                         else:
                             b_not_reviewed[b] = 1
+            
+            # remaining businesses that this user reviewed => P(1|0)
+            for b in usr["businesses"]:
+                if b not in b_reviewed:
+                    b_reviewed[b] = 0 # zero friends reviewed this business
+                    
+            # all other businesses that this user did not review => P(0|0)
+            # for b in tqdm(self.businesses, desc="Getting prob(0|0)"):
+            #     if b not in b_not_reviewed:
+            #         b_not_reviewed[b] = 0 # zero friends reviewed this business
             
             # updating prob_counts based on values from b_not_reviewed and b_reviewed:
             for b in b_not_reviewed:

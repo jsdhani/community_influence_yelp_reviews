@@ -42,7 +42,7 @@ def bin_data(data, bins=[x for x in range(0,51,5)], ignore_exact=[0,1]):
                 binned_d[l] += v
     return binned_d
 
-def plot_bins(binned_d0, binned_d1=None):
+def plot_bins(binned_d0, binned_d1=None, w=2.5):
     """_summary_
 
     Args:
@@ -56,8 +56,8 @@ def plot_bins(binned_d0, binned_d1=None):
         data_0 = np.array([[x,y] for x,y in binned_d0.items()])
         data_1 = np.array([[x,y] for x,y in binned_d1.items()])
         
-        h0 = plt.bar(data_0[:,0], data_0[:,1], width=2.5, align='edge')
-        h1 = plt.bar(data_1[:,0]+2.5, data_1[:,1], width=2.5, align='edge')
+        h0 = plt.bar(data_0[:,0], data_0[:,1], width=w, align='edge')
+        h1 = plt.bar(data_1[:,0]+w, data_1[:,1], width=w, align='edge')
         
         plt.legend((h0[0], h1[0]), ('P(0|i)', 'P(1|i)'))
 
