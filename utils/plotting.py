@@ -174,20 +174,29 @@ def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None):
     if save_path:
         plt.savefig(f'{save_path}{t_s}.png')
 
-# def plot_rating_dist(time_periods, 
-#                      path=f'{RESULTS}ratings-overall-no-rest/ratings_', 
-#                      save_path='media/final_ptt_plots/ratings/distributions/no-rest/'):
-#     for i, t in enumerate(time_periods):
-#         curr_path, t_s = get_pkl_path(path, t)
-#         data = pickle.load(open(curr_path(""), 'rb'))
-        
-#         # data is as {b_id: avg rating}
-#         bins = np.histogram(list(data.values()), bins=10, density=True)
-#         plt.stairs(bins[0], bins[1], fill=True)
-#         plt.xlabel("Star Rating")
-#         plt.yticks(ticks=[])
-#         plt.title(f'Average Non-Restaraunt Ratings Distribution \n{t_s}')
-        
-#         # plt.show()
-#         plt.savefig(f'{save_path}{t_s}.png')
-#         plt.clf()
+
+def get_time_periods(covid_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
+                     num_periods=4):
+    len_covid = covid_range[1] - covid_range[0] # 609 days
+    time_periods = []
+    for x in range(4):
+        start = covid_range[0] - (x * len_covid)
+        end = covid_range[1] - (x * len_covid)
+        time_periods.append((start, end))
+    return time_periods
+
+if __name__ == "__main__":
+    time_periods = get_time_periods()
+    
+    # Plotting rating distributions for businesses
+    path=f'{RESULTS}ratings-overall/ratings_'
+    save_path='media/final_ptt_plots/ratings/distributions/all/'
+
+    for i, t in enumerate(time_periods):
+        curr_path, t_s = get_pkl_path(path, t)
+        data = pickle.load(open(curr_path(""), 'rb'))
+    
+        plot_rating_dist(list(data.values()), t_s, 
+                        section='Business', save_path=save_path)
+        plt.show()
+        plt.clf()
