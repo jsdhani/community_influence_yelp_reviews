@@ -26,28 +26,21 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
                             get_time_periods)
 
 time_periods = get_time_periods(num_periods=4)
+
 #%%
-PKL_FOLDER_PATH = f"{RESULTS}ratings/ratings_"
-SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/all/"
+# Plotting rating distributions for businesses
+path=f'{RESULTS}ratings-overall-no-rest/ratings_'
+save_path='media/final_ptt_plots/ratings/distributions/no-rest/'
 
+for i, t in enumerate(time_periods):
+    curr_path, t_s = get_pkl_path(path, t)
+    data = pickle.load(open(curr_path(""), 'rb'))
 
-# %% plotting with linear regression
-# # FOR RATINGS
-lines = []
-for i,t in enumerate(time_periods):
-    path, t_s = get_pkl_path(PKL_FOLDER_PATH, t)
-    data = pickle.load(open(path(''), 'rb'))
-    line = get_linear_reg(data)
-    lines.append(line)
-    
-    plt.plot(data[:,0], data[:,0]*line[0] + line[1], label=f"{t_s}")
-    
-
-plt.xlabel("User Rating")
-plt.ylabel("Average Friend Rating")
-plt.ylim(0.8,5.2)
-plt.xlim(0.8,5.2)
-plt.title("Average Friend Rating Regression Lines (All Businesses)")
-plt.legend()
-plt.savefig(f"{SAVE_PATH}lines.png")
+    plot_rating_dist(list(data.values()), t_s, 
+                    section='Restaurant', alpha=.5)#, save_path=save_path)
+    # plt.show()
+    # plt.clf()
+plt.title(f"Rating Distribution for Non-Restaurants")
+plt.legend(loc='upper left')
+plt.savefig(f'{save_path}overlay.png')
 # %%

@@ -163,9 +163,9 @@ def plot_mc_prob_compare(time_periods, ignore_exact=[0,1],
         
     return pears, lines
 
-def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None):
+def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None, alpha=0.5):
     bins = np.histogram(values, bins=10, density=True)
-    plt.stairs(bins[0], bins[1], fill=True)
+    plt.stairs(bins[0], bins[1], fill=True, label=t_s, alpha=alpha)
     plt.yticks(ticks=[])
     plt.xlabel("Star Rating")
     plt.title(f'Average {section} Rating Distribution \n{t_s}')
@@ -227,3 +227,28 @@ if __name__ == "__main__":
         line = get_linear_reg(data)
         plot_ratings(data, t_s, section="No Restaurants",
                     line=line, save_path=SAVE_PATH)
+        
+    # ratings lines
+    PKL_FOLDER_PATH = f"{RESULTS}ratings/ratings_"
+    SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/all/"
+
+
+    # %% plotting with linear regression
+    # # FOR RATINGS
+    lines = []
+    for i,t in enumerate(time_periods):
+        path, t_s = get_pkl_path(PKL_FOLDER_PATH, t)
+        data = pickle.load(open(path(''), 'rb'))
+        line = get_linear_reg(data)
+        lines.append(line)
+        
+        plt.plot(data[:,0], data[:,0]*line[0] + line[1], label=f"{t_s}")
+        
+
+    plt.xlabel("User Rating")
+    plt.ylabel("Average Friend Rating")
+    plt.ylim(0.8,5.2)
+    plt.xlim(0.8,5.2)
+    plt.title("Average Friend Rating Regression Lines (All Businesses)")
+    plt.legend()
+    # plt.savefig(f"{SAVE_PATH}lines.png")
