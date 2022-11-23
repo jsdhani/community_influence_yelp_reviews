@@ -163,7 +163,6 @@ def plot_mc_prob_compare(time_periods, ignore_exact=[0,1],
         
     return pears, lines
 
-
 def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None):
     bins = np.histogram(values, bins=10, density=True)
     plt.stairs(bins[0], bins[1], fill=True)
@@ -174,6 +173,20 @@ def plot_rating_dist(values:list, t_s, section="Restaraunt", save_path=None):
     if save_path:
         plt.savefig(f'{save_path}{t_s}.png')
 
+def plot_ratings(ratings:np.ndarray, t_s, section='All Ratings', line=None, save_path=None): # line is a tuple of (slope, intercept)
+    plt.scatter(ratings[:,0], ratings[:,1])
+    
+    if line is not None:
+        plt.plot(ratings[:,0], line[0]*ratings[:,0] + line[1], label=t_s, color='k')
+    
+    plt.xlabel("User Rating")
+    plt.ylabel("Average Friend Rating")
+    plt.title(f"{section}\n{t_s}")
+    # plt.legend()
+    
+    if save_path:
+        plt.savefig(f'{save_path}{t_s}.png')
+    plt.show()
 
 def get_time_periods(covid_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
                      num_periods=4):
