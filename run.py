@@ -27,21 +27,27 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
 
 time_periods = get_time_periods(num_periods=4)
 #%%
-
-PKL_FOLDER_PATH = f"{RESULTS}ratings-no-rest/ratings_"
-SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/no-rest/"
+PKL_FOLDER_PATH = f"{RESULTS}ratings/ratings_"
+SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/all/"
 
 
 # %% plotting with linear regression
 # # FOR RATINGS
+lines = []
 for i,t in enumerate(time_periods):
     path, t_s = get_pkl_path(PKL_FOLDER_PATH, t)
     data = pickle.load(open(path(''), 'rb'))
     line = get_linear_reg(data)
-    plot_ratings(data, t_s, section="No Restaurants",
-                 line=line, save_path=SAVE_PATH)
+    lines.append(line)
     
+    plt.plot(data[:,0], data[:,0]*line[0] + line[1], label=f"{t_s}")
     
-#     if fig_save_path: plt.savefig(fig_save_path+t_s+'.png')
 
+plt.xlabel("User Rating")
+plt.ylabel("Average Friend Rating")
+plt.ylim(0.8,5.2)
+plt.xlim(0.8,5.2)
+plt.title("Average Friend Rating Regression Lines (All Businesses)")
+plt.legend()
+plt.savefig(f"{SAVE_PATH}lines.png")
 # %%

@@ -213,3 +213,17 @@ if __name__ == "__main__":
                         section='Business', save_path=save_path)
         plt.show()
         plt.clf()
+        
+    # plotting rating corr:
+    PKL_FOLDER_PATH = f"{RESULTS}ratings-no-rest/ratings_"
+    SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/no-rest/"
+
+
+    # %% plotting with linear regression
+    # # FOR RATINGS
+    for i,t in enumerate(time_periods):
+        path, t_s = get_pkl_path(PKL_FOLDER_PATH, t)
+        data = pickle.load(open(path(''), 'rb'))
+        line = get_linear_reg(data)
+        plot_ratings(data, t_s, section="No Restaurants",
+                    line=line, save_path=SAVE_PATH)
