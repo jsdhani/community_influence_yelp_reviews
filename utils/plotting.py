@@ -198,7 +198,7 @@ def get_time_periods(covid_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021
                      num_periods=4):
     len_covid = covid_range[1] - covid_range[0] # 609 days
     time_periods = []
-    for x in range(4):
+    for x in range(num_periods):
         start = covid_range[0] - (x * len_covid)
         end = covid_range[1] - (x * len_covid)
         time_periods.append((start, end))

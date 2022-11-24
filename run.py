@@ -25,9 +25,45 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
                             plot_ratings,
                             get_time_periods)
 
-time_periods = get_time_periods(num_periods=4)
+time_periods = get_time_periods(num_periods=10)
+
+#%%
+
+PKL_FOLDER_PATH = f"{RESULTS}ratings-rest/ratings_"
+# SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/all/"
+
+
+# %% plotting with linear regression
+# # FOR RATINGS
+lines = []
+pears = []
+for i,t in enumerate(time_periods):
+    path, t_s = get_pkl_path(PKL_FOLDER_PATH, t)
+    data = pickle.load(open(path(''), 'rb'))
+    line = get_linear_reg(data)
+    pear = get_pearson(data, alt='two-sided', cutoff=math.inf)
+    
+    pears.append(pear)
+    lines.append(line)
+    
+    plt.plot(data[:,0], data[:,0]*line[0] + line[1], label=f"{t_s}")
+    
+    
+plt.xlabel("User Rating")
+plt.ylabel("Average Friend Rating")
+plt.ylim(0.8,5.2)
+plt.xlim(0.8,5.2)
+plt.title("Average Friend Rating Regression Lines (All Businesses)")
+plt.legend()
+
+for p in pears:
+    print('{:10.3}{:10.3}'.format(p[0], p[1]))
 
 # %%
+exit()
+
+
+
 PATH_PKL = "results/mc_final_redo/" # need Non-normalized versions
 PATH_MEDIA = "media/final_ptt_plots/mc_final_redo/"
 # for t in time_periods:
