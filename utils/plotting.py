@@ -92,7 +92,7 @@ def plot_mc_prob(time_periods):
         plt.show()
         plt.clf()
 
-def plot_over_time(data, time_periods,ax=None,idx=0, labels=('P(0|i=)', 'P(1|i)')): # idx picks the elemnt of the tuple in data
+def plot_over_time(data, time_periods,ax=None,idx=0, labels=('P(0|i)', 'P(1|i)')): # idx picks the elemnt of the tuple in data
     """_summary_
 
     Args:

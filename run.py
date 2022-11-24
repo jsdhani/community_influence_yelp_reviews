@@ -43,8 +43,10 @@ PATH_MEDIA = "media/final_ptt_plots/mc_final_redo/"
 MC_PATH_PKL = "results/monte_carlo_prob0/"
 MC_PATH_MEDIA = "media/monte_carlo_prob01_binned/"
 bins = [x for x in range(0,51,5)]
-# bins = [0,0,1]
-ignore_exact = [0,1]
+bins = [0,0,1]
+ignore_exact = []
+i_str = "".join([str(x) for x in ignore_exact])
+print(i_str)
 p = [] # [[P(0|i=0), P(0|i>0)], [P(1|i=0), P(1|i>0)]]
 for t in time_periods:
     path, t_s = get_pkl_path(PATH_PKL, t)
@@ -53,32 +55,16 @@ for t in time_periods:
     data_0 = pickle.load(open(path("_prob_0"), "rb"))
     data_1 = pickle.load(open(path("_prob_1"), "rb"))
     
-    bd_0 = bin_data(data_0, bins, ignore_exact, normalize=True)
-    bd_1 = bin_data(data_1, bins, ignore_exact, normalize=True)
+    # normalize before binning
+    data_0 = {k:v/sum(data_0.values()) for k,v in data_0.items()}
+    data_1 = {k:v/sum(data_1.values()) for k,v in data_1.items()}
     
-    # pear_0 = get_pearson(bd_0, alt="two-sided")
-    # line_0 = get_linear_reg(bd_0)
+    bd_0 = bin_data(data_0, bins, ignore_exact)
+    bd_1 = bin_data(data_1, bins, ignore_exact)
     
-    # pear_1 = get_pearson(bd_1, alt="two-sided")
-    # line_1 = get_linear_reg(bd_1)
-    
-    # pear = [pear_0, pear_1]
-    # line = [line_0, line_1]
-    
-    # pears.append(pear)
-    # lines.append(line)
-    
-    plot_bins(bd_0, bd_1)
-    
-    plt.xlabel("Number of i friends who reviewed same business")
-    plt.ylabel("Monte Carlo counts")
-    plt.ylim(0,1)
-    plt.title(f"{t_s}: Ignoring i={ignore_exact}")
-    
-    i_str = "".join([str(x) for x in ignore_exact])
-    plt.savefig(f"{PATH_MEDIA}{t_s}_prob_01_i{i_str}.png")
-    plt.show()
-    plt.clf()
+    p.append([[bd_0[0], bd_0[1]],
+              [bd_1[0], bd_1[1]]])
+
 # %%
 #p[:, 1, 0] # P(1|i=0)
 #p[:, 1, 1] # P(1|i>0)
@@ -86,6 +72,15 @@ for t in time_periods:
 # fig, ax = plt.subplots()
 plot_over_time(p, time_periods, idx=0, 
                 labels=('P(0|i=0)', 'P(1|i=0)'))
+plt.ylim(0, 1.05)
+plt.title("Probability of that a user does/doesn't write a review \nwhen no friends have reviewed over time")
+plt.savefig("media/final_ptt_plots/mc_final_redo/compare/p_ie0.png")
+plt.clf()
+
 plot_over_time(p, time_periods, idx=1,
                 labels=('P(0|i>0)', 'P(1|i>0)'))
+plt.ylim(0, 1.05)
+plt.title("Probability of that a user does/doesn't write a review \nwhen at least 1 friend has reviewed over time")
+plt.savefig("media/final_ptt_plots/mc_final_redo/compare/p_ig0.png")
+plt.clf()
 # %%
