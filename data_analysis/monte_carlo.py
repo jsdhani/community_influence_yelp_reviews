@@ -27,7 +27,8 @@ import pickle
 import pandas as pd
 
 from utils.query_raw_yelp import QueryYelp as qy
-from common.config_paths import (
+from common.config_paths import ( 
+    YELP_BUSINESS_PATH,
     YELP_REVIEWS_PATH,
     YELP_USER_PATH, 
     MC_RESULTS_PATH)
@@ -55,7 +56,7 @@ class ReviewProb:
         self.SAVE_PATH = self.SAVE_PATH_FN(
                 f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
         
-        self.all_businesses = set() # used to get P(0|0) later
+        self.all_businesses_filtered = set() # used to get P(0|0) later
         
         # we start with the reviews to filter specific time periods
         for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE),
@@ -67,7 +68,7 @@ class ReviewProb:
                 # ensuring that we only get reviews from specific time range (YYYY-MM-DD)
                 if date >= date_range[0] and date <= date_range[1]:
                     # adding to all businesses reviewed in the time period
-                    if bus_id not in self.all_businesses: self.all_businesses.add(bus_id)
+                    if bus_id not in self.all_businesses_filtered: self.all_businesses_filtered.add(bus_id)
                     
                     if usr_id not in self.users:
                         self.users[usr_id] = {"businesses": {bus_id: [rev_id]}} # network is added later
@@ -86,6 +87,82 @@ class ReviewProb:
 
         # now we iterate through the users and to populate their network
         for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE), 
+                          desc="Populating user dictionary with reviews"):
+            for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
+                # again we are ignoring users with no reviews and users with no friends in our time period
+                if usr_id in self.users and f_ids != "None":
+                    f_ids = set([x.strip() for x in f_ids.split(",")])
+                    
+                    if len(f_ids) > 0:
+                        self.users[usr_id]["network"] = f_ids
+                    else:
+                        del self.users[usr_id] # removing users with no friends
+                        
+        # final check to remove users with no reviews or no friends
+        no_network = [k for k,v in self.users.items() if "network" not in v]
+        for k in tqdm(no_network, desc="Final Check: Removing users with no friends"):
+            del self.users[k]
+            
+        print("Finished prepping data!")
+        return self.users
+    
+    def prep_data_range_region(self, 
+                               date_range=(pd.Timestamp('2019-12-01'), pd.Timestamp('2021-08-01')), 
+                               region_lat=(49.037868,59.578851), 
+                               region_lon=(-129.375000,-52.558594)): # Canada
+        """
+        Prepares the data for performing monte carlo sampling of reviews within a certain period of time.
+
+        Args:
+            date_range (tuple, optional): time periods in pd.Timestamp form. 
+                Defaults to ('2019-12-01', '2021-08-01').
+        """
+        # chaning the save path to reflect the date range
+        self.SAVE_PATH = self.SAVE_PATH_FN(
+                f"{date_range[0].strftime('%Y-%m-%d')}_{date_range[1].strftime('%Y-%m-%d')}")
+        
+        # filtering businesses by region
+        t_df = pd.DataFrame()
+        for chunk in tqdm(qy.get_json_reader(YELP_BUSINESS_PATH), total=151, 
+                          desc="Filtering businesses by region"):
+            t_df = pd.concat([t_df,chunk[chunk.latitude.between(*region_lat) & chunk.longitude.between(*region_lon)]])
+            
+        all_businesses_region = set(t_df.business_id)
+        
+        
+        self.all_businesses_filtered = set() # used to get P(0|0) later
+        
+        # we start with the reviews to filter specific time periods
+        for chunk in tqdm(qy.get_json_reader(YELP_REVIEWS_PATH, chunksize=self.CHUNKSIZE),
+                          total=6991,
+                          desc="Creating user dictionary"):
+            for usr_id, bus_id, rev_id, date in zip(
+                            chunk["user_id"], chunk["business_id"], 
+                            chunk["review_id"], chunk["date"]):     
+                
+                # ensuring that we only get reviews from specific time range (YYYY-MM-DD)
+                if date >= date_range[0] and date <= date_range[1] and bus_id in all_businesses_region: # filtering by region as well
+                    # adding to all businesses reviewed in the time period
+                    if bus_id not in self.all_businesses_filtered: self.all_businesses_filtered.add(bus_id)
+                    
+                    if usr_id not in self.users:
+                        self.users[usr_id] = {"businesses": {bus_id: [rev_id]}} # network is added later
+                    else:
+                        if bus_id not in self.users[usr_id]["businesses"]:
+                            self.users[usr_id]["businesses"][bus_id] = [rev_id]
+                        else:
+                            self.users[usr_id]["businesses"][bus_id].append(rev_id)
+            
+                    # limiting number of users for space constraints
+                    if self.MAX_USERS and len(self.users) >= self.MAX_USERS:
+                        break
+            else: # if the for loop didn't break
+                continue
+            break
+
+        # now we iterate through the users and to populate their network
+        for chunk in tqdm(qy.get_json_reader(YELP_USER_PATH, chunksize=self.CHUNKSIZE), 
+                          total=1988,
                           desc="Populating user dictionary with reviews"):
             for usr_id, f_ids in zip(chunk["user_id"], chunk["friends"]):
                 # again we are ignoring users with no reviews and users with no friends in our time period
@@ -212,7 +289,7 @@ class ReviewProb:
             
             # all other businesses that this user did not review or friends didnt review=> P(0|0)
             if 0 not in prob_counts_0: prob_counts_0[0] = 0 # initialize if not already
-            prob_counts_0[0] += len(self.all_businesses) - (
+            prob_counts_0[0] += len(self.all_businesses_filtered) - (
                                 len(b_not_reviewed) +   # User didnt review but friends did
                                 len(b_reviewed))        # User reviewed and friends did (disjoint from b_not_reviewed)
                                                         # = total businesses reviewed by Users and friends

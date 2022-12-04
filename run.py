@@ -5,7 +5,7 @@ I am just using this as a test bed for now, please excuse the mess...
 # %%
 from data_analysis.monte_carlo import ReviewProb
 from data_analysis.rating_analysis import RatingAnalysisFriends, RatingAnalysisGeneral
-from common.config_paths import (
+from common.config_paths import (YELP_BUSINESS_PATH,
             YELP_REVIEWS_PATH, YELP_USER_PATH, 
             MC_RESULTS_PATH, RESULTS, RATINGS_CORR_PATH)
 from common.constants import restaurant_categories
@@ -25,32 +25,23 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
                             plot_ratings,
                             get_time_periods)
 
-time_periods = get_time_periods(num_periods=2)
+time_periods = get_time_periods(num_periods=4)
+PATH_PKL = "results/monte_carlo_hetrogenityQ/CA/" 
+PATH_MEDIA = "media/monte_carlo_hetrogenityQ/CA/"
+#%%
+for t in time_periods:
+    path, t_s = get_pkl_path(PATH_PKL, t) # gets the correctly formatted path
+    print(path("_prob_X"))
+
+    rp = ReviewProb(save_path=PATH_PKL)
+    rp.prep_data_range_region(date_range=(t[0], t[1]))
+    p0, p1 = rp.get_probs(plot=False, save=True, normalize=False)
+
 
 #%%
-
-PKL_FOLDER_PATH = f"{RESULTS}ratings-rest/ratings_"
-# SAVE_PATH = "media/final_ptt_plots/ratings/friend_corr/all/"
-
-#%%
-
-PATH_PKL = "results/mc_final_redo/" # need Non-normalized versions
-PATH_MEDIA = "media/final_ptt_plots/mc_final_redo/"
-# for t in time_periods:
-#     path, t_s = get_pkl_path(PATH_PKL, t)
-#     print(path("_prob_X"))
-
-#     rp = ReviewProb(save_path=PATH_PKL)
-#     rp.prep_data_range(date_range=(t[0], t[1]))
-#     p0, p1 = rp.get_probs(plot=False, save=True, normalize=False)
-    
-#%%
-
-MC_PATH_PKL = "results/monte_carlo_prob0/"
-MC_PATH_MEDIA = "media/monte_carlo_prob01_binned/"
 bins = [x for x in range(0,51,5)]
-# bins = [0,0,1]
-ignore_exact = [0,1,2,3,4,5]
+bins = [0,0,1]
+ignore_exact = [0]
 i_str = "".join([str(x) for x in ignore_exact])
 print(i_str)
 p = [] # [[P(0|i=0), P(0|i>0)], [P(1|i=0), P(1|i>0)]]
@@ -65,8 +56,8 @@ for t in time_periods:
     data_0 = {k:v/sum(data_0.values()) for k,v in data_0.items()}
     data_1 = {k:v/sum(data_1.values()) for k,v in data_1.items()}
     
-    bd_0 = bin_data(data_0, bins, ignore_exact, normalize=True)
-    bd_1 = bin_data(data_1, bins, ignore_exact, normalize=True)
+    bd_0 = bin_data(data_0, bins, ignore_exact)#, normalize=True)
+    bd_1 = bin_data(data_1, bins, ignore_exact)#, normalize=True)
     
     plot_bins(bd_0, bd_1)
         
@@ -80,8 +71,8 @@ for t in time_periods:
     plt.show()
     plt.clf()
     
-    # p.append([[bd_0[0], bd_0[1]],
-    #           [bd_1[0], bd_1[1]]])
+    p.append([[bd_0[0], bd_0[1]],
+              [bd_1[0], bd_1[1]]])
 
 # %%
 #p[:, 1, 0] # P(1|i=0)
