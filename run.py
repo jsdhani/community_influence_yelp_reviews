@@ -25,7 +25,82 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
                             plot_ratings,
                             get_time_periods)
 
-time_periods = get_time_periods(num_periods=2)
+time_periods = get_time_periods(num_periods=4)
+# %%
+PATH_PKL = "results/mc_final_redo/" # need Non-normalized versions
+PATH_MEDIA = "media/final_ptt_plots/mc_final_redo/"
+
+MC_PATH_PKL = "results/monte_carlo_prob0/"
+MC_PATH_MEDIA = "media/monte_carlo_prob01_binned/"
+bins = [x for x in range(0,51,5)]
+bins = [0,0,1]
+ignore_exact = []
+i_str = "".join([str(x) for x in ignore_exact])
+print(i_str)
+p = [] # [[P(0|i=0), P(0|i>0)], [P(1|i=0), P(1|i>0)]]
+for t in time_periods:
+    path, t_s = get_pkl_path(PATH_PKL, t)
+    print(path("_prob_X"))
+    
+    data_0 = pickle.load(open(path("_prob_0"), "rb"))
+    data_1 = pickle.load(open(path("_prob_1"), "rb"))
+    
+    # normalize before binning
+    data_0 = {k:v/sum(data_0.values()) for k,v in data_0.items()}
+    data_1 = {k:v/sum(data_1.values()) for k,v in data_1.items()}
+    
+    bd_0 = bin_data(data_0, bins, ignore_exact)
+    bd_1 = bin_data(data_1, bins, ignore_exact)
+    
+    p.append([[bd_0[0], bd_0[1]],
+              [bd_1[0], bd_1[1]]])
+
+#p[:, 1, 0] # P(1|i=0)
+#p[:, 1, 1] # P(1|i>0)
+#p[:, 0, 0] # P(0|i=0)
+# fig, ax = plt.subplots()
+plot_over_time(p, time_periods, idx=0, 
+                labels=('P(0,i=0)', 'P(1,i=0)'))
+plt.ylim(0, 1.05)
+plt.title("MC probability i=0 for if a user reviews or not \n(P(1) or P(0), respectively)")
+plt.savefig("media/final_paper_figures/MC/mc_2014_2021_i0.png")
+plt.xlabel("Time Period")
+plt.show()
+plt.clf()
+
+plot_over_time(p, time_periods, idx=1,
+                labels=('P(0,i>0)', 'P(1,i>0)'))
+plt.ylim(0, 1.05)
+plt.title("MC probability i>0 for if a user reviews or not \n(P(1) or P(0), respectively)")
+plt.savefig("media/final_paper_figures/MC/mc_2014_2021_ig0.png")
+plt.xlabel("Time Period")
+plt.show()
+plt.clf()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
 PATH_PKL = "results/mc_final_redo/" 
 # PATH_MEDIA = "media/monte_carlo_hetrogenityQ/CA/"
 SAVE_FIG_PATH = "media/final_paper_figures/"
