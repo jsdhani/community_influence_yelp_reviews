@@ -25,26 +25,28 @@ from utils.plotting import (get_pkl_path, get_mc_pkl_path,
                             plot_ratings,
                             get_time_periods)
 
-time_periods = get_time_periods(num_periods=4)
-PATH_PKL = "results/monte_carlo_hetrogenityQ/CA/" 
-PATH_MEDIA = "media/monte_carlo_hetrogenityQ/CA/"
+time_periods = get_time_periods(num_periods=2)
+PATH_PKL = "results/mc_final_redo/" 
+# PATH_MEDIA = "media/monte_carlo_hetrogenityQ/CA/"
+SAVE_FIG_PATH = "media/final_paper_figures/"
 #%%
-for t in time_periods:
-    path, t_s = get_pkl_path(PATH_PKL, t) # gets the correctly formatted path
-    print(path("_prob_X"))
+# for t in time_periods:
+#     path, t_s = get_pkl_path(PATH_PKL, t) # gets the correctly formatted path
+#     print(path("_prob_X"))
 
-    rp = ReviewProb(save_path=PATH_PKL)
-    rp.prep_data_range_region(date_range=(t[0], t[1]))
-    p0, p1 = rp.get_probs(plot=False, save=True, normalize=False)
+#     rp = ReviewProb(save_path=PATH_PKL)
+#     rp.prep_data_range_region(date_range=(t[0], t[1]))
+#     p0, p1 = rp.get_probs(plot=False, save=True, normalize=False)
 
 
 #%%
 bins = [x for x in range(0,51,5)]
-bins = [0,0,1]
-ignore_exact = [0]
+# bins = [0,0,1]
+ignore_exact = [0,1,2,3]
 i_str = "".join([str(x) for x in ignore_exact])
 print(i_str)
 p = [] # [[P(0|i=0), P(0|i>0)], [P(1|i=0), P(1|i>0)]]
+h = []
 for t in time_periods:
     path, t_s = get_pkl_path(PATH_PKL, t)
     print(path("_prob_X"))
@@ -53,27 +55,33 @@ for t in time_periods:
     data_1 = pickle.load(open(path("_prob_1"), "rb"))
     
     # normalize before binning
-    data_0 = {k:v/sum(data_0.values()) for k,v in data_0.items()}
-    data_1 = {k:v/sum(data_1.values()) for k,v in data_1.items()}
+    # data_0 = {k:v/sum(data_0.values()) for k,v in data_0.items()}
+    # data_1 = {k:v/sum(data_1.values()) for k,v in data_1.items()}
     
-    bd_0 = bin_data(data_0, bins, ignore_exact)#, normalize=True)
-    bd_1 = bin_data(data_1, bins, ignore_exact)#, normalize=True)
+    bd_0 = bin_data(data_0, bins, ignore_exact, normalize=True)
+    bd_1 = bin_data(data_1, bins, ignore_exact, normalize=True)
     
-    plot_bins(bd_0, bd_1)
+    h0, h1 = plot_bins(bd_0, bd_1)
+    h.append([h0, h1])
         
     plt.xlabel("Number of i friends who reviewed same business")
     plt.ylabel("Monte Carlo probability")
     plt.title(f"{t_s}: Ignoring i={ignore_exact}")
     plt.ylim(0,1)
     
-    i_str = "".join([str(x) for x in ignore_exact])
     # plt.savefig(f"{MC_PATH_MEDIA}{t_s}_prob_01_i{i_str}.png")
-    plt.show()
-    plt.clf()
+    # plt.show()
+    # plt.clf()
     
-    p.append([[bd_0[0], bd_0[1]],
-              [bd_1[0], bd_1[1]]])
+    # p.append([[bd_0[0], bd_0[1]],
+    #           [bd_1[0], bd_1[1]]])
 
+extra = f"\n(ignoring i={ignore_exact})" if ignore_exact else ""
+plt.title(f"MC probability distribution for user reviews {extra}")
+plt.legend([h[1][0], h[1][1], h[0][0],h[0][1]],
+    ['PRE-COV: P(0,i)', 'PRE-COV: P(1,i)', 'COVID: P(0,i)', 'COVID: P(1,i)', ])
+i_str = "".join([str(x) for x in ignore_exact])
+plt.savefig(f"{SAVE_FIG_PATH}/MC/MC_2018_2021_i{i_str}.png")
 # %%
 #p[:, 1, 0] # P(1|i=0)
 #p[:, 1, 1] # P(1|i>0)
