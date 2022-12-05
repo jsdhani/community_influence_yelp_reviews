@@ -1,0 +1,14 @@
+Here are the values for pearson coeff (note that p values were all zero):
+starting with 2019-21 ending at 2014-16
+
+For all business:
+0.386
+0.411
+0.397
+0.386
+
+For just restaurants:
+0.357
+0.379
+0.370
+0.358
